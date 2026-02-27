@@ -1,0 +1,52 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  fromEditableDocument,
+  toEditableDocument,
+  type SkillDocument,
+} from "../src/domain/skillDocument";
+
+test("toEditableDocument normalizes frontmatter fields", () => {
+  const raw: SkillDocument = {
+    frontmatter: {
+      name: "code-review",
+      description: "review code",
+      category: "quality",
+      tags: ["review", "quality"],
+      my_notes: "before merge",
+      last_updated: "2026-02-27",
+      custom_flag: true,
+    },
+    body: "## Body\n",
+  };
+
+  const normalized = toEditableDocument(raw);
+
+  assert.equal(normalized.frontmatter.name, "code-review");
+  assert.deepEqual(normalized.frontmatter.tags, ["review", "quality"]);
+  assert.equal(normalized.frontmatter.extra.custom_flag, true);
+  assert.equal(normalized.body, "## Body\n");
+});
+
+test("fromEditableDocument serializes markdown with frontmatter and body", () => {
+  const markdown = fromEditableDocument({
+    frontmatter: {
+      name: "planner",
+      description: "plan tasks",
+      category: "planning",
+      tags: ["plan", "daily"],
+      my_notes: "use daily",
+      last_updated: "",
+      extra: {
+        custom_flag: true,
+      },
+    },
+    body: "new body\n",
+  });
+
+  assert.match(markdown, /^---\n/);
+  assert.match(markdown, /name: "planner"/);
+  assert.match(markdown, /custom_flag: true/);
+  assert.match(markdown, /new body/);
+});

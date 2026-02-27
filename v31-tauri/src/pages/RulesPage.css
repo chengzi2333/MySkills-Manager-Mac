@@ -1,0 +1,7 @@
+.rules-editor-wrap {
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-md);
+    flex: 1;
+    min-height: 400px;
+    overflow: hidden;
+}

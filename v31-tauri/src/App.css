@@ -1,0 +1,36 @@
+.app-shell {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  display: flex;
+  height: 100%;
+  transition: background var(--transition), color var(--transition);
+}
+
+.app-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.app-status-bar {
+  align-items: center;
+  border-bottom: 1px solid var(--border-card);
+  display: flex;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-xl);
+}
+
+.status-dot {
+  background: var(--success);
+  border-radius: 50%;
+  display: inline-block;
+  height: 6px;
+  width: 6px;
+}
+
+.status-text {
+  color: var(--text-muted);
+  font-size: 11px;
+}

@@ -1,0 +1,9 @@
+# MySkills Manager root (Tauri only)
+
+.DS_Store
+Thumbs.db
+
+v31-tauri/node_modules/
+v31-tauri/dist/
+v31-tauri/.vite/
+v31-tauri/src-tauri/target/

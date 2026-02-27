@@ -1,0 +1,22 @@
+.tools-placeholder {
+    align-items: center;
+    background: var(--bg-card);
+    border: 2px dashed var(--border-card);
+    border-radius: var(--radius-lg);
+    color: var(--text-secondary);
+    display: flex;
+    font-size: 14px;
+    justify-content: center;
+    line-height: 1.6;
+    min-height: 300px;
+    padding: var(--sp-2xl);
+    text-align: center;
+}
+
+.tools-placeholder code {
+    background: var(--accent-light);
+    border-radius: var(--radius-sm);
+    color: var(--accent);
+    font-size: 12px;
+    padding: 2px 6px;
+}

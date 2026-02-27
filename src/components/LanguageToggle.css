@@ -1,0 +1,20 @@
+.language-toggle {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  justify-content: center;
+  min-width: 36px;
+  padding: var(--sp-sm);
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.language-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

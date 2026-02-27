@@ -650,7 +650,7 @@ fn is_skill_enabled_for_tool(
   };
 
   let Some(config) = config_skills.iter().find(|item| item.skill_name == skill_name) else {
-    return true;
+    return false;
   };
 
   config

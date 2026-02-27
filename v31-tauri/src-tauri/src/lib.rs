@@ -5,6 +5,7 @@ mod rules;
 mod git;
 mod setup;
 mod onboarding;
+mod root_dir;
 
 #[tauri::command]
 fn app_ping() -> String {

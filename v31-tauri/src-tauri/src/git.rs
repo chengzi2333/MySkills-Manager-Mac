@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct GitStatusResult {
@@ -21,21 +21,6 @@ pub struct GitCommitResult {
 pub struct GitPushResult {
   pub success: bool,
   pub error: Option<String>,
-}
-
-fn default_root_dir() -> PathBuf {
-  if let Ok(path) = std::env::var("MYSKILLS_ROOT_DIR") {
-    return PathBuf::from(path);
-  }
-
-  if let Ok(home) = std::env::var("HOME") {
-    return Path::new(&home).join("my-skills");
-  }
-  if let Ok(home) = std::env::var("USERPROFILE") {
-    return Path::new(&home).join("my-skills");
-  }
-
-  PathBuf::from("./")
 }
 
 fn push_unique(list: &mut Vec<String>, value: String) {
@@ -286,17 +271,17 @@ pub fn push_origin(_root: &Path) -> Result<GitPushResult, String> {
 
 #[tauri::command]
 pub fn git_status() -> Result<GitStatusResult, String> {
-  get_git_status(&default_root_dir())
+  get_git_status(&crate::root_dir::default_root_dir())
 }
 
 #[tauri::command]
 pub fn git_commit(message: String) -> Result<GitCommitResult, String> {
-  commit_all(&default_root_dir(), &message)
+  commit_all(&crate::root_dir::default_root_dir(), &message)
 }
 
 #[tauri::command]
 pub fn git_push() -> Result<GitPushResult, String> {
-  push_origin(&default_root_dir())
+  push_origin(&crate::root_dir::default_root_dir())
 }
 
 #[cfg(test)]

@@ -27,21 +27,6 @@ pub struct SaveResult {
   pub success: bool,
 }
 
-fn default_root_dir() -> PathBuf {
-  if let Ok(path) = std::env::var("MYSKILLS_ROOT_DIR") {
-    return PathBuf::from(path);
-  }
-
-  if let Ok(home) = std::env::var("HOME") {
-    return Path::new(&home).join("my-skills");
-  }
-  if let Ok(home) = std::env::var("USERPROFILE") {
-    return Path::new(&home).join("my-skills");
-  }
-
-  PathBuf::from("./")
-}
-
 fn split_frontmatter(raw: &str) -> Result<(Mapping, String), String> {
   let normalized = raw.replace("\r\n", "\n");
   if !normalized.starts_with("---\n") {
@@ -180,18 +165,18 @@ pub fn save_content(root: &Path, name: &str, content: &str, today: &str) -> Resu
 
 #[tauri::command]
 pub fn skills_list() -> Result<Vec<SkillMeta>, String> {
-  list_skills(&default_root_dir())
+  list_skills(&crate::root_dir::default_root_dir())
 }
 
 #[tauri::command]
 pub fn skills_get_content(name: String) -> Result<SkillDocument, String> {
-  get_content(&default_root_dir(), &name)
+  get_content(&crate::root_dir::default_root_dir(), &name)
 }
 
 #[tauri::command]
 pub fn skills_save_content(name: String, content: String) -> Result<SaveResult, String> {
   let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
-  save_content(&default_root_dir(), &name, &content, &today)
+  save_content(&crate::root_dir::default_root_dir(), &name, &content, &today)
 }
 
 #[cfg(test)]

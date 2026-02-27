@@ -3,7 +3,6 @@ use serde::Serialize;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
-use std::path::PathBuf;
 
 use crate::logs::LogEntry;
 use crate::skills::list_skills;
@@ -34,21 +33,6 @@ fn parse_ts(ts: &str) -> Option<DateTime<Utc>> {
   DateTime::parse_from_rfc3339(ts)
     .ok()
     .map(|dt| dt.with_timezone(&Utc))
-}
-
-fn default_root_dir() -> PathBuf {
-  if let Ok(path) = std::env::var("MYSKILLS_ROOT_DIR") {
-    return PathBuf::from(path);
-  }
-
-  if let Ok(home) = std::env::var("HOME") {
-    return Path::new(&home).join("my-skills");
-  }
-  if let Ok(home) = std::env::var("USERPROFILE") {
-    return Path::new(&home).join("my-skills");
-  }
-
-  PathBuf::from("./")
 }
 
 fn compare_logs_desc(a: &LogEntry, b: &LogEntry) -> Ordering {
@@ -133,7 +117,7 @@ pub fn compute_stats_with_now(
 
 #[tauri::command]
 pub fn stats_get(days: Option<u32>) -> Result<StatsResult, String> {
-  compute_stats_with_now(&default_root_dir(), days.unwrap_or(30), Utc::now())
+  compute_stats_with_now(&crate::root_dir::default_root_dir(), days.unwrap_or(30), Utc::now())
 }
 
 #[cfg(test)]

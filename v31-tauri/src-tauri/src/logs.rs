@@ -30,21 +30,6 @@ pub struct LogsQuery {
   pub limit: usize,
 }
 
-fn default_root_dir() -> PathBuf {
-  if let Ok(path) = std::env::var("MYSKILLS_ROOT_DIR") {
-    return PathBuf::from(path);
-  }
-
-  if let Ok(home) = std::env::var("HOME") {
-    return Path::new(&home).join("my-skills");
-  }
-  if let Ok(home) = std::env::var("USERPROFILE") {
-    return Path::new(&home).join("my-skills");
-  }
-
-  PathBuf::from("./")
-}
-
 fn parse_ts(ts: &str) -> Option<DateTime<Utc>> {
   DateTime::parse_from_rfc3339(ts)
     .ok()
@@ -157,7 +142,7 @@ pub fn logs_get(
     page: page.unwrap_or(1),
     limit: limit.unwrap_or(100),
   };
-  get_logs(&default_root_dir(), &query)
+  get_logs(&crate::root_dir::default_root_dir(), &query)
 }
 
 #[cfg(test)]

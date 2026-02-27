@@ -12,21 +12,6 @@ pub struct RulesSaveResult {
   pub success: bool,
 }
 
-fn default_root_dir() -> PathBuf {
-  if let Ok(path) = std::env::var("MYSKILLS_ROOT_DIR") {
-    return PathBuf::from(path);
-  }
-
-  if let Ok(home) = std::env::var("HOME") {
-    return Path::new(&home).join("my-skills");
-  }
-  if let Ok(home) = std::env::var("USERPROFILE") {
-    return Path::new(&home).join("my-skills");
-  }
-
-  PathBuf::from("./")
-}
-
 fn rules_file(root: &Path) -> PathBuf {
   root.join("AGENTS.md")
 }
@@ -52,12 +37,12 @@ pub fn save_rules(root: &Path, content: &str) -> Result<RulesSaveResult, String>
 
 #[tauri::command]
 pub fn rules_get() -> Result<RulesContent, String> {
-  get_rules(&default_root_dir())
+  get_rules(&crate::root_dir::default_root_dir())
 }
 
 #[tauri::command]
 pub fn rules_save(content: String) -> Result<RulesSaveResult, String> {
-  save_rules(&default_root_dir(), &content)
+  save_rules(&crate::root_dir::default_root_dir(), &content)
 }
 
 #[cfg(test)]

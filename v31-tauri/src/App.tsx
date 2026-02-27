@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 
-import { appPing, skillsList, type SkillMeta } from "./api/tauri";
+import {
+  appPing,
+  onboardingGetState,
+  type OnboardingCompleteResult,
+  skillsList,
+  type SkillMeta,
+} from "./api/tauri";
+import OnboardingWizard from "./components/OnboardingWizard";
 import Sidebar, { type ViewName } from "./components/Sidebar";
 import DashboardPage from "./pages/DashboardPage";
 import GitPage from "./pages/GitPage";
@@ -14,6 +21,10 @@ export default function App() {
   const [view, setView] = useState<ViewName>("skills");
   const [skills, setSkills] = useState<SkillMeta[]>([]);
   const [ping, setPing] = useState("checking...");
+  const [booting, setBooting] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(true);
+  const [initialSkillsDir, setInitialSkillsDir] = useState("");
+  const [initialAutoSync, setInitialAutoSync] = useState(false);
 
   function loadSkills() {
     void skillsList()
@@ -22,9 +33,46 @@ export default function App() {
   }
 
   useEffect(() => {
+    void (async () => {
+      try {
+        const state = await onboardingGetState();
+        setOnboardingCompleted(state.completed);
+        setInitialSkillsDir(state.skillsDir);
+        setInitialAutoSync(state.autoSync);
+        if (state.completed) {
+          void appPing().then(setPing).catch(() => setPing("error"));
+          loadSkills();
+        } else {
+          setPing("onboarding");
+        }
+      } catch {
+        setPing("error");
+      } finally {
+        setBooting(false);
+      }
+    })();
+  }, []);
+
+  function handleOnboardingCompleted(result: OnboardingCompleteResult) {
+    setOnboardingCompleted(true);
+    setInitialAutoSync(result.autoSync);
     void appPing().then(setPing).catch(() => setPing("error"));
     loadSkills();
-  }, []);
+  }
+
+  if (booting) {
+    return <div className="app-status-bar">loading...</div>;
+  }
+
+  if (!onboardingCompleted) {
+    return (
+      <OnboardingWizard
+        initialSkillsDir={initialSkillsDir}
+        initialAutoSync={initialAutoSync}
+        onCompleted={handleOnboardingCompleted}
+      />
+    );
+  }
 
   function renderPage() {
     switch (view) {

@@ -4,6 +4,7 @@ mod stats;
 mod rules;
 mod git;
 mod setup;
+mod onboarding;
 
 #[tauri::command]
 fn app_ping() -> String {
@@ -14,6 +15,9 @@ fn app_ping() -> String {
 pub fn run() {
   tauri::Builder::default()
     .setup(|app| {
+      if let Err(err) = onboarding::apply_bootstrap_env() {
+        eprintln!("onboarding bootstrap failed: {err}");
+      }
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
@@ -39,7 +43,10 @@ pub fn run() {
       setup::setup_apply,
       setup::setup_get_custom_tools,
       setup::setup_add_custom_tool,
-      setup::setup_remove_custom_tool
+      setup::setup_remove_custom_tool,
+      onboarding::onboarding_get_state,
+      onboarding::onboarding_set_skills_dir,
+      onboarding::onboarding_complete
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

@@ -126,6 +126,23 @@ export type SetupMutationResult = {
   success: boolean;
 };
 
+export type OnboardingState = {
+  completed: boolean;
+  skillsDir: string;
+  autoSync: boolean;
+};
+
+export type OnboardingSetSkillsDirResult = {
+  success: boolean;
+  skills: SkillMeta[];
+};
+
+export type OnboardingCompleteResult = {
+  success: boolean;
+  autoSync: boolean;
+  configuredTools: number;
+};
+
 export async function appPing(): Promise<string> {
   return invoke<string>("app_ping");
 }
@@ -200,4 +217,16 @@ export async function setupAddCustomTool(tool: CustomTool): Promise<SetupMutatio
 
 export async function setupRemoveCustomTool(id: string): Promise<SetupMutationResult> {
   return invoke<SetupMutationResult>("setup_remove_custom_tool", { id });
+}
+
+export async function onboardingGetState(): Promise<OnboardingState> {
+  return invoke<OnboardingState>("onboarding_get_state");
+}
+
+export async function onboardingSetSkillsDir(dir: string): Promise<OnboardingSetSkillsDirResult> {
+  return invoke<OnboardingSetSkillsDirResult>("onboarding_set_skills_dir", { dir });
+}
+
+export async function onboardingComplete(autoSync: boolean): Promise<OnboardingCompleteResult> {
+  return invoke<OnboardingCompleteResult>("onboarding_complete", { auto_sync: autoSync });
 }

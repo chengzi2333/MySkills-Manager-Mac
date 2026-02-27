@@ -192,8 +192,8 @@ export async function setupAddCustomTool(tool: CustomTool): Promise<SetupMutatio
   return invoke<SetupMutationResult>("setup_add_custom_tool", {
     name: tool.name,
     id: tool.id,
-    skillsDir: tool.skillsDir,
-    rulesFile: tool.rulesFile,
+    skills_dir: tool.skillsDir,
+    rules_file: tool.rulesFile,
     icon: tool.icon,
   });
 }

@@ -215,13 +215,59 @@ pub fn push_origin(_root: &Path) -> Result<GitPushResult, String> {
     .find_remote("origin")
     .map_err(|e| format!("Find git remote 'origin' failed: {e}"))?;
 
+  let git_config = repo
+    .config()
+    .map_err(|e| format!("Read git config failed: {e}"))?;
+  let env_username = std::env::var("GIT_USERNAME").ok();
+  let env_password = std::env::var("GIT_PASSWORD")
+    .ok()
+    .or_else(|| std::env::var("GIT_TOKEN").ok())
+    .or_else(|| std::env::var("GH_TOKEN").ok())
+    .or_else(|| std::env::var("GITHUB_TOKEN").ok());
+
   let mut callbacks = git2::RemoteCallbacks::new();
-  callbacks.credentials(|_url, username, _allowed| {
-    if let Some(name) = username {
-      git2::Cred::ssh_key_from_agent(name)
-    } else {
-      git2::Cred::default()
+  callbacks.credentials(move |url, username, allowed| {
+    if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) {
+      if let Some(password) = env_password.as_deref() {
+        let user = env_username
+          .as_deref()
+          .or(username)
+          .unwrap_or("git");
+        if let Ok(cred) = git2::Cred::userpass_plaintext(user, password) {
+          return Ok(cred);
+        }
+      }
     }
+
+    if let Ok(cred) = git2::Cred::credential_helper(&git_config, url, username) {
+      return Ok(cred);
+    }
+
+    if allowed.contains(git2::CredentialType::SSH_KEY) {
+      if let Some(name) = username {
+        if let Ok(cred) = git2::Cred::ssh_key_from_agent(name) {
+          return Ok(cred);
+        }
+      }
+    }
+
+    if allowed.contains(git2::CredentialType::DEFAULT) {
+      if let Ok(cred) = git2::Cred::default() {
+        return Ok(cred);
+      }
+    }
+
+    if allowed.contains(git2::CredentialType::USERNAME) {
+      if let Some(name) = username {
+        if let Ok(cred) = git2::Cred::username(name) {
+          return Ok(cred);
+        }
+      }
+    }
+
+    Err(git2::Error::from_str(
+      "No supported git credentials found for push",
+    ))
   });
 
   let mut push_options = git2::PushOptions::new();
@@ -358,5 +404,16 @@ mod tests {
     let remote_ref = remote_repo.find_reference(&ref_name).expect("find remote branch");
     let remote_oid = remote_ref.target().expect("remote target");
     assert_eq!(remote_oid.to_string(), commit_result.hash);
+  }
+
+  #[test]
+  fn push_origin_fails_with_clear_message_when_origin_missing() {
+    let root = temp_root();
+    init_repo(&root);
+    fs::write(root.join("note.md"), "hello").expect("write file");
+    commit_all(&root, "feat: init").expect("create commit");
+
+    let err = push_origin(&root).expect_err("expected missing origin error");
+    assert!(err.to_lowercase().contains("origin"));
   }
 }

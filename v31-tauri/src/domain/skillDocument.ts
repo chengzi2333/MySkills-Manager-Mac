@@ -1,3 +1,5 @@
+import { stringify } from "yaml";
+
 export type SkillDocument = {
   frontmatter: Record<string, unknown>;
   body: string;
@@ -40,23 +42,6 @@ function asTags(value: unknown): string[] {
     .filter((item) => item.length > 0);
 }
 
-function quoteYaml(value: string): string {
-  return JSON.stringify(value);
-}
-
-function serializeYamlPrimitive(value: unknown): string {
-  if (typeof value === "string") {
-    return quoteYaml(value);
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  if (value === null || value === undefined) {
-    return "null";
-  }
-  return quoteYaml(JSON.stringify(value));
-}
-
 export function toEditableDocument(raw: SkillDocument): EditableSkillDocument {
   const frontmatter = raw.frontmatter ?? {};
   const extra: Record<string, unknown> = {};
@@ -82,28 +67,26 @@ export function toEditableDocument(raw: SkillDocument): EditableSkillDocument {
 }
 
 export function fromEditableDocument(doc: EditableSkillDocument): string {
-  const lines: string[] = [];
   const meta = doc.frontmatter;
+  const frontmatter: Record<string, unknown> = {};
 
-  if (meta.name) lines.push(`name: ${quoteYaml(meta.name)}`);
-  if (meta.description) lines.push(`description: ${quoteYaml(meta.description)}`);
-  if (meta.category) lines.push(`category: ${quoteYaml(meta.category)}`);
-
-  if (meta.tags.length > 0) {
-    lines.push("tags:");
-    for (const tag of meta.tags) {
-      lines.push(`  - ${quoteYaml(tag)}`);
-    }
-  }
-
-  if (meta.my_notes) lines.push(`my_notes: ${quoteYaml(meta.my_notes)}`);
-  if (meta.last_updated) lines.push(`last_updated: ${quoteYaml(meta.last_updated)}`);
+  if (meta.name) frontmatter.name = meta.name;
+  if (meta.description) frontmatter.description = meta.description;
+  if (meta.category) frontmatter.category = meta.category;
+  if (meta.tags.length > 0) frontmatter.tags = meta.tags;
+  if (meta.my_notes) frontmatter.my_notes = meta.my_notes;
+  if (meta.last_updated) frontmatter.last_updated = meta.last_updated;
 
   const extraKeys = Object.keys(meta.extra).sort();
   for (const key of extraKeys) {
-    lines.push(`${key}: ${serializeYamlPrimitive(meta.extra[key])}`);
+    frontmatter[key] = meta.extra[key];
   }
 
+  const yaml = stringify(frontmatter, {
+    defaultKeyType: "PLAIN",
+    defaultStringType: "QUOTE_DOUBLE",
+    lineWidth: 0,
+  }).trimEnd();
   const normalizedBody = doc.body.replace(/\r\n/g, "\n").trimStart();
-  return `---\n${lines.join("\n")}\n---\n\n${normalizedBody}`;
+  return `---\n${yaml}\n---\n\n${normalizedBody}`;
 }

@@ -46,7 +46,30 @@ test("fromEditableDocument serializes markdown with frontmatter and body", () =>
   });
 
   assert.match(markdown, /^---\n/);
-  assert.match(markdown, /name: "planner"/);
+  assert.match(markdown, /name:\s*"planner"/);
   assert.match(markdown, /custom_flag: true/);
   assert.match(markdown, /new body/);
+});
+
+test("fromEditableDocument keeps multiline and special frontmatter values", () => {
+  const markdown = fromEditableDocument({
+    frontmatter: {
+      name: "special-skill",
+      description: "line 1\nline 2",
+      category: "ops",
+      tags: ["a:b", "x#y"],
+      my_notes: "quote: \"hello\"",
+      last_updated: "2026-02-27",
+      extra: {
+        nested: { env: "prod", enabled: true },
+      },
+    },
+    body: "body\n",
+  });
+
+  assert.match(markdown, /description:/);
+  assert.match(markdown, /line 1/);
+  assert.match(markdown, /line 2/);
+  assert.match(markdown, /nested:/);
+  assert.match(markdown, /enabled: true/);
 });

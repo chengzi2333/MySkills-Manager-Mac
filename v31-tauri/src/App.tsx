@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 
 import {
+  APP_ERROR_EVENT,
   appPing,
   onboardingGetState,
   type OnboardingCompleteResult,
   skillsList,
   type SkillMeta,
 } from "./api/tauri";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 import OnboardingWizard from "./components/OnboardingWizard";
 import Sidebar, { type ViewName } from "./components/Sidebar";
 import DashboardPage from "./pages/DashboardPage";
@@ -25,6 +27,15 @@ export default function App() {
   const [onboardingCompleted, setOnboardingCompleted] = useState(true);
   const [initialSkillsDir, setInitialSkillsDir] = useState("");
   const [initialAutoSync, setInitialAutoSync] = useState(false);
+  const [globalErrors, setGlobalErrors] = useState<{ id: number; message: string }[]>([]);
+
+  function pushGlobalError(message: string) {
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    setGlobalErrors((prev) => [...prev, { id, message }].slice(-4));
+    setTimeout(() => {
+      setGlobalErrors((prev) => prev.filter((item) => item.id !== id));
+    }, 6000);
+  }
 
   function loadSkills() {
     void skillsList()
@@ -51,6 +62,30 @@ export default function App() {
         setBooting(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    const handleAppError = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      pushGlobalError(detail || "Unknown app error");
+    };
+    const handleWindowError = (event: ErrorEvent) => {
+      if (event.message) {
+        pushGlobalError(event.message);
+      }
+    };
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      pushGlobalError(String(event.reason ?? "Unhandled promise rejection"));
+    };
+
+    window.addEventListener(APP_ERROR_EVENT, handleAppError as EventListener);
+    window.addEventListener("error", handleWindowError);
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    return () => {
+      window.removeEventListener(APP_ERROR_EVENT, handleAppError as EventListener);
+      window.removeEventListener("error", handleWindowError);
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+    };
   }, []);
 
   function handleOnboardingCompleted(result: OnboardingCompleteResult) {
@@ -92,15 +127,24 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <Sidebar active={view} onChange={setView} />
-      <div className="app-content">
-        <div className="app-status-bar">
-          <span className="status-dot" />
-          <span className="status-text">app_ping: {ping}</span>
+    <AppErrorBoundary onError={pushGlobalError}>
+      <div className="app-shell">
+        <Sidebar active={view} onChange={setView} />
+        <div className="app-content">
+          <div className="app-status-bar">
+            <span className="status-dot" />
+            <span className="status-text">app_ping: {ping}</span>
+          </div>
+          {renderPage()}
         </div>
-        {renderPage()}
+        <div className="app-error-toast-wrap">
+          {globalErrors.map((item) => (
+            <div key={item.id} className="app-error-toast">
+              {item.message}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </AppErrorBoundary>
   );
 }

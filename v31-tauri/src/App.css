@@ -34,3 +34,39 @@
   color: var(--text-muted);
   font-size: 11px;
 }
+
+.app-error-toast-wrap {
+  display: grid;
+  gap: 8px;
+  position: fixed;
+  right: 16px;
+  top: 16px;
+  width: min(420px, calc(100vw - 32px));
+  z-index: 9999;
+}
+
+.app-error-toast {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  color: var(--danger);
+  font-size: 13px;
+  padding: 10px 12px;
+}
+
+.app-fallback {
+  align-items: center;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  display: grid;
+  gap: 8px;
+  min-height: 100vh;
+  place-content: center;
+  text-align: center;
+}
+
+.app-fallback h2,
+.app-fallback p {
+  margin: 0;
+}

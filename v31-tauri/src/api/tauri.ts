@@ -1,5 +1,30 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export const APP_ERROR_EVENT = "myskills:error";
+
+function normalizeInvokeError(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function reportGlobalError(message: string) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(APP_ERROR_EVENT, { detail: message }));
+  }
+}
+
+async function invokeWithError<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+  try {
+    return await invoke<T>(command, args);
+  } catch (error: unknown) {
+    const message = normalizeInvokeError(error);
+    reportGlobalError(message);
+    throw new Error(message);
+  }
+}
+
 export type SkillMeta = {
   name: string;
   description?: string;
@@ -144,69 +169,69 @@ export type OnboardingCompleteResult = {
 };
 
 export async function appPing(): Promise<string> {
-  return invoke<string>("app_ping");
+  return invokeWithError<string>("app_ping");
 }
 
 export async function skillsList(): Promise<SkillMeta[]> {
-  return invoke<SkillMeta[]>("skills_list");
+  return invokeWithError<SkillMeta[]>("skills_list");
 }
 
 export async function skillsGetContent(name: string): Promise<SkillDocument> {
-  return invoke<SkillDocument>("skills_get_content", { name });
+  return invokeWithError<SkillDocument>("skills_get_content", { name });
 }
 
 export async function skillsSaveContent(
   name: string,
   content: string,
 ): Promise<SaveResult> {
-  return invoke<SaveResult>("skills_save_content", { name, content });
+  return invokeWithError<SaveResult>("skills_save_content", { name, content });
 }
 
 export async function statsGet(days?: number): Promise<StatsResult> {
-  return invoke<StatsResult>("stats_get", { days });
+  return invokeWithError<StatsResult>("stats_get", { days });
 }
 
 export async function logsGet(query: LogsQuery): Promise<LogsResult> {
-  return invoke<LogsResult>("logs_get", query);
+  return invokeWithError<LogsResult>("logs_get", query);
 }
 
 export async function rulesGet(): Promise<RulesContent> {
-  return invoke<RulesContent>("rules_get");
+  return invokeWithError<RulesContent>("rules_get");
 }
 
 export async function rulesSave(content: string): Promise<RulesSaveResult> {
-  return invoke<RulesSaveResult>("rules_save", { content });
+  return invokeWithError<RulesSaveResult>("rules_save", { content });
 }
 
 export async function gitStatus(): Promise<GitStatus> {
-  return invoke<GitStatus>("git_status");
+  return invokeWithError<GitStatus>("git_status");
 }
 
 export async function gitCommit(message: string): Promise<GitCommitResult> {
-  return invoke<GitCommitResult>("git_commit", { message });
+  return invokeWithError<GitCommitResult>("git_commit", { message });
 }
 
 export async function gitPush(): Promise<GitPushResult> {
-  return invoke<GitPushResult>("git_push");
+  return invokeWithError<GitPushResult>("git_push");
 }
 
 export async function setupStatus(): Promise<ToolStatus[]> {
-  return invoke<ToolStatus[]>("setup_status");
+  return invokeWithError<ToolStatus[]>("setup_status");
 }
 
 export async function setupApply(
   tools: string[],
   skills?: SkillSyncConfig[],
 ): Promise<SetupApplyResult[]> {
-  return invoke<SetupApplyResult[]>("setup_apply", { tools, skills });
+  return invokeWithError<SetupApplyResult[]>("setup_apply", { tools, skills });
 }
 
 export async function setupGetCustomTools(): Promise<CustomTool[]> {
-  return invoke<CustomTool[]>("setup_get_custom_tools");
+  return invokeWithError<CustomTool[]>("setup_get_custom_tools");
 }
 
 export async function setupAddCustomTool(tool: CustomTool): Promise<SetupMutationResult> {
-  return invoke<SetupMutationResult>("setup_add_custom_tool", {
+  return invokeWithError<SetupMutationResult>("setup_add_custom_tool", {
     name: tool.name,
     id: tool.id,
     skills_dir: tool.skillsDir,
@@ -216,17 +241,17 @@ export async function setupAddCustomTool(tool: CustomTool): Promise<SetupMutatio
 }
 
 export async function setupRemoveCustomTool(id: string): Promise<SetupMutationResult> {
-  return invoke<SetupMutationResult>("setup_remove_custom_tool", { id });
+  return invokeWithError<SetupMutationResult>("setup_remove_custom_tool", { id });
 }
 
 export async function onboardingGetState(): Promise<OnboardingState> {
-  return invoke<OnboardingState>("onboarding_get_state");
+  return invokeWithError<OnboardingState>("onboarding_get_state");
 }
 
 export async function onboardingSetSkillsDir(dir: string): Promise<OnboardingSetSkillsDirResult> {
-  return invoke<OnboardingSetSkillsDirResult>("onboarding_set_skills_dir", { dir });
+  return invokeWithError<OnboardingSetSkillsDirResult>("onboarding_set_skills_dir", { dir });
 }
 
 export async function onboardingComplete(autoSync: boolean): Promise<OnboardingCompleteResult> {
-  return invoke<OnboardingCompleteResult>("onboarding_complete", { auto_sync: autoSync });
+  return invokeWithError<OnboardingCompleteResult>("onboarding_complete", { auto_sync: autoSync });
 }

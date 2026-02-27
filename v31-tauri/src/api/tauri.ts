@@ -109,6 +109,11 @@ export type SetupApplyResult = {
   error?: string;
 };
 
+export type SkillSyncConfig = {
+  skillName: string;
+  enabledTools: string[];
+};
+
 export type CustomTool = {
   name: string;
   id: string;
@@ -172,8 +177,11 @@ export async function setupStatus(): Promise<ToolStatus[]> {
   return invoke<ToolStatus[]>("setup_status");
 }
 
-export async function setupApply(tools: string[]): Promise<SetupApplyResult[]> {
-  return invoke<SetupApplyResult[]>("setup_apply", { tools });
+export async function setupApply(
+  tools: string[],
+  skills?: SkillSyncConfig[],
+): Promise<SetupApplyResult[]> {
+  return invoke<SetupApplyResult[]>("setup_apply", { tools, skills });
 }
 
 export async function setupGetCustomTools(): Promise<CustomTool[]> {

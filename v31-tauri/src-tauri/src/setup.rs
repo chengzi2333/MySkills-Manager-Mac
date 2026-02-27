@@ -44,6 +44,22 @@ pub struct SetupMutationResult {
   pub success: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillSyncConfig {
+  pub skill_name: String,
+  pub enabled_tools: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct SyncConfigFile {
+  #[serde(default = "default_sync_mode")]
+  sync_mode: String,
+  #[serde(default)]
+  skills: Vec<SkillSyncConfig>,
+}
+
 #[derive(Debug, Clone)]
 struct ToolDescriptor {
   name: String,
@@ -57,6 +73,10 @@ const TRACKER_BLOCK_START: &str =
   "<!-- [MySkills Manager] Skill usage tracking rule - DO NOT REMOVE -->";
 const TRACKER_BLOCK_END: &str = "<!-- [/MySkills Manager] -->";
 const CLAUDE_HOOK_REL_PATH: &str = ".claude/hooks/skill-tracker.sh";
+
+fn default_sync_mode() -> String {
+  "symlink".to_string()
+}
 
 fn default_home_dir() -> PathBuf {
   if let Ok(home) = std::env::var("HOME") {
@@ -81,6 +101,10 @@ fn app_config_dir(home: &Path) -> PathBuf {
 
 fn custom_tools_file(home: &Path) -> PathBuf {
   app_config_dir(home).join("custom-tools.json")
+}
+
+fn sync_config_file(home: &Path) -> PathBuf {
+  app_config_dir(home).join("sync-config.json")
 }
 
 fn built_in_tools(home: &Path) -> Vec<ToolDescriptor> {
@@ -158,6 +182,38 @@ fn write_custom_tools(home: &Path, tools: &[CustomTool]) -> Result<(), String> {
     .map_err(|e| format!("Serialize custom tools failed: {e}"))?;
   fs::write(custom_tools_file(home), format!("{content}\n"))
     .map_err(|e| format!("Write custom tools failed: {e}"))
+}
+
+fn read_sync_config(home: &Path) -> Result<Option<SyncConfigFile>, String> {
+  let path = sync_config_file(home);
+  if !path.exists() {
+    return Ok(None);
+  }
+
+  let raw = fs::read_to_string(path).map_err(|e| format!("Read sync config failed: {e}"))?;
+  if raw.trim().is_empty() {
+    return Ok(None);
+  }
+
+  let parsed = serde_json::from_str::<SyncConfigFile>(&raw)
+    .map_err(|e| format!("Invalid sync config: {e}"))?;
+  Ok(Some(parsed))
+}
+
+fn write_sync_config(home: &Path, skills: &[SkillSyncConfig]) -> Result<(), String> {
+  fs::create_dir_all(app_config_dir(home))
+    .map_err(|e| format!("Create app config dir failed: {e}"))?;
+
+  let sync_mode = read_sync_config(home)?
+    .map(|cfg| cfg.sync_mode)
+    .unwrap_or_else(default_sync_mode);
+  let content = serde_json::to_string_pretty(&SyncConfigFile {
+    sync_mode,
+    skills: skills.to_vec(),
+  })
+  .map_err(|e| format!("Serialize sync config failed: {e}"))?;
+  fs::write(sync_config_file(home), format!("{content}\n"))
+    .map_err(|e| format!("Write sync config failed: {e}"))
 }
 
 fn validate_tool_id(id: &str) -> Result<String, String> {
@@ -572,13 +628,54 @@ echo "{\"ts\":\"$TIMESTAMP\",\"skill\":\"$SKILL_NAME\",\"session\":\"$SESSION_ID
     .map_err(|e| format!("Write claude settings failed: {e}"))
 }
 
+fn remove_skill_target(target_dir: &Path, target_file: &Path) -> Result<(), String> {
+  remove_if_exists(target_file)?;
+  if target_dir.exists() {
+    let mut entries = fs::read_dir(target_dir)
+      .map_err(|e| format!("Read target dir failed: {e}"))?;
+    if entries.next().is_none() {
+      fs::remove_dir_all(target_dir).map_err(|e| format!("Remove target dir failed: {e}"))?;
+    }
+  }
+  Ok(())
+}
+
+fn is_skill_enabled_for_tool(
+  skill_name: &str,
+  tool_id: &str,
+  config_skills: Option<&[SkillSyncConfig]>,
+) -> bool {
+  let Some(config_skills) = config_skills else {
+    return true;
+  };
+
+  let Some(config) = config_skills.iter().find(|item| item.skill_name == skill_name) else {
+    return true;
+  };
+
+  config
+    .enabled_tools
+    .iter()
+    .any(|enabled| enabled == tool_id)
+}
+
 pub fn apply_setup_with_paths(
   home: &Path,
   skills_root: &Path,
   tool_ids: &[String],
+  skill_configs: Option<&[SkillSyncConfig]>,
 ) -> Result<Vec<ApplyResult>, String> {
   let tools = all_tools(home)?;
   let skills = crate::skills::list_skills(skills_root)?;
+  if let Some(configs) = skill_configs {
+    write_sync_config(home, configs)?;
+  }
+  let stored_sync_config = if skill_configs.is_some() {
+    skill_configs.map(|items| items.to_vec())
+  } else {
+    read_sync_config(home)?.map(|cfg| cfg.skills)
+  };
+  let config_ref = stored_sync_config.as_deref();
   let mut out = Vec::<ApplyResult>::new();
 
   for tool_id in tool_ids {
@@ -607,6 +704,7 @@ pub fn apply_setup_with_paths(
     }
 
     let mut synced_count = 0usize;
+    let mut removed_count = 0usize;
     let mut sync_mode = "symlink".to_string();
     let mut failure: Option<String> = None;
 
@@ -614,6 +712,16 @@ pub fn apply_setup_with_paths(
       let source = PathBuf::from(&skill.directory).join("SKILL.md");
       let target_dir = tool.skills_dir.join(&skill.name);
       let target_file = target_dir.join("SKILL.md");
+
+      if !is_skill_enabled_for_tool(&skill.name, &tool.id, config_ref) {
+        if let Err(err) = remove_skill_target(&target_dir, &target_file) {
+          failure = Some(err);
+          break;
+        }
+        removed_count += 1;
+        continue;
+      }
+
       if let Err(err) = fs::create_dir_all(&target_dir) {
         failure = Some(format!("Create target dir failed: {err}"));
         break;
@@ -650,7 +758,7 @@ pub fn apply_setup_with_paths(
     }
 
     let mut action_parts = vec![format!(
-      "synced {synced_count} skills to {}",
+      "synced {synced_count} skills to {} (removed {removed_count})",
       tool.skills_dir.to_string_lossy()
     )];
 
@@ -710,10 +818,13 @@ pub fn apply_setup_with_paths(
 }
 
 #[tauri::command]
-pub fn setup_apply(tools: Vec<String>) -> Result<Vec<ApplyResult>, String> {
+pub fn setup_apply(
+  tools: Vec<String>,
+  skills: Option<Vec<SkillSyncConfig>>,
+) -> Result<Vec<ApplyResult>, String> {
   let home = default_home_dir();
   let skills_root = default_skills_root(&home);
-  apply_setup_with_paths(&home, &skills_root, &tools)
+  apply_setup_with_paths(&home, &skills_root, &tools, skills.as_deref())
 }
 
 #[cfg(test)]
@@ -832,7 +943,7 @@ mod tests {
     )
     .expect("write skill");
 
-    let result = apply_setup_with_paths(&home, &skills_root, &["codex".to_string()])
+    let result = apply_setup_with_paths(&home, &skills_root, &["codex".to_string()], None)
       .expect("apply setup");
     assert_eq!(result.len(), 1);
     assert!(result[0].success);
@@ -858,11 +969,67 @@ mod tests {
   }
 
   #[test]
+  fn setup_apply_respects_per_tool_skill_config() {
+    let home = temp_home();
+    let skills_root = temp_home();
+    fs::create_dir_all(home.join(".codex")).expect("create codex parent");
+    fs::create_dir_all(home.join(".myskills-manager")).expect("create app config dir");
+
+    fs::create_dir_all(skills_root.join("code-review")).expect("create code-review skill dir");
+    fs::write(
+      skills_root.join("code-review").join("SKILL.md"),
+      "---\nname: code-review\n---\n",
+    )
+    .expect("write code-review skill");
+
+    fs::create_dir_all(skills_root.join("debug-helper")).expect("create debug-helper skill dir");
+    fs::write(
+      skills_root.join("debug-helper").join("SKILL.md"),
+      "---\nname: debug-helper\n---\n",
+    )
+    .expect("write debug-helper skill");
+
+    let sync_config = serde_json::json!({
+      "syncMode": "symlink",
+      "skills": [
+        { "skillName": "code-review", "enabledTools": ["codex"] }
+      ]
+    });
+    fs::write(
+      home.join(".myskills-manager").join("sync-config.json"),
+      serde_json::to_string(&sync_config).expect("serialize sync config"),
+    )
+    .expect("write sync config");
+
+    let result = apply_setup_with_paths(&home, &skills_root, &["codex".to_string()], None)
+      .expect("apply setup");
+
+    assert!(result[0].success);
+    assert_eq!(result[0].synced_count, 1);
+    assert!(
+      home
+        .join(".codex")
+        .join("skills")
+        .join("code-review")
+        .join("SKILL.md")
+        .exists()
+    );
+    assert!(
+      !home
+        .join(".codex")
+        .join("skills")
+        .join("debug-helper")
+        .join("SKILL.md")
+        .exists()
+    );
+  }
+
+  #[test]
   fn setup_apply_returns_error_for_unknown_tool() {
     let home = temp_home();
     let skills_root = temp_home();
 
-    let result = apply_setup_with_paths(&home, &skills_root, &["unknown".to_string()])
+    let result = apply_setup_with_paths(&home, &skills_root, &["unknown".to_string()], None)
       .expect("apply setup");
     assert_eq!(result.len(), 1);
     assert!(!result[0].success);
@@ -925,7 +1092,7 @@ mod tests {
     )
     .expect("write custom tools");
 
-    let result = apply_setup_with_paths(&home, &skills_root, &["aider".to_string()])
+    let result = apply_setup_with_paths(&home, &skills_root, &["aider".to_string()], None)
       .expect("apply setup");
     assert_eq!(result.len(), 1);
     assert!(result[0].success);
@@ -950,11 +1117,11 @@ mod tests {
     )
     .expect("write skill");
 
-    let first = apply_setup_with_paths(&home, &skills_root, &["codex".to_string()])
+    let first = apply_setup_with_paths(&home, &skills_root, &["codex".to_string()], None)
       .expect("apply setup");
     assert!(first[0].success);
 
-    let second = apply_setup_with_paths(&home, &skills_root, &["codex".to_string()])
+    let second = apply_setup_with_paths(&home, &skills_root, &["codex".to_string()], None)
       .expect("apply setup");
     assert!(second[0].success);
 
@@ -976,7 +1143,7 @@ mod tests {
     )
     .expect("write skill");
 
-    let result = apply_setup_with_paths(&home, &skills_root, &["claude-code".to_string()])
+    let result = apply_setup_with_paths(&home, &skills_root, &["claude-code".to_string()], None)
       .expect("apply setup");
     assert!(result[0].success);
 

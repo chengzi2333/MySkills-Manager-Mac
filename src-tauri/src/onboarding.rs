@@ -62,35 +62,16 @@ pub struct OnboardingImportSkillsResult {
     pub tools: Vec<ToolImportSummary>,
 }
 
-fn default_home_dir() -> PathBuf {
-    if let Ok(home) = std::env::var("HOME") {
-        return PathBuf::from(home);
-    }
-    if let Ok(home) = std::env::var("USERPROFILE") {
-        return PathBuf::from(home);
-    }
-    PathBuf::from("./")
-}
-
-fn default_skills_root(home: &Path) -> PathBuf {
-    if let Ok(path) = std::env::var("MYSKILLS_ROOT_DIR") {
-        return PathBuf::from(path);
-    }
-    home.join("my-skills")
-}
-
-fn app_config_dir(home: &Path) -> PathBuf {
-    home.join(".myskills-manager")
-}
-
 fn config_file(home: &Path) -> PathBuf {
-    app_config_dir(home).join("config.json")
+    crate::root_dir::app_config_dir(home).join("config.json")
 }
 
 fn default_config(home: &Path) -> AppConfig {
     AppConfig {
         onboarding_completed: false,
-        skills_dir: default_skills_root(home).to_string_lossy().to_string(),
+        skills_dir: crate::root_dir::default_skills_root(home)
+            .to_string_lossy()
+            .to_string(),
         auto_sync: false,
     }
 }
@@ -134,7 +115,7 @@ fn read_config(home: &Path) -> Result<AppConfig, String> {
 }
 
 fn write_config(home: &Path, config: &AppConfig) -> Result<(), String> {
-    fs::create_dir_all(app_config_dir(home))
+    fs::create_dir_all(crate::root_dir::app_config_dir(home))
         .map_err(|e| format!("Create app config dir failed: {e}"))?;
     let content = serde_json::to_string_pretty(config)
         .map_err(|e| format!("Serialize onboarding config failed: {e}"))?;
@@ -162,7 +143,7 @@ fn copy_dir_recursive(source: &Path, target: &Path) -> Result<(), String> {
 }
 
 pub fn apply_bootstrap_env() -> Result<(), String> {
-    let home = default_home_dir();
+    let home = crate::root_dir::default_home_dir();
     let config = read_config(&home)?;
     if !config.skills_dir.trim().is_empty() {
         unsafe {
@@ -338,7 +319,7 @@ pub fn onboarding_import_installed_skills_with_home(
 
 #[tauri::command]
 pub fn onboarding_get_state() -> Result<OnboardingState, String> {
-    onboarding_get_state_with_home(&default_home_dir())
+    onboarding_get_state_with_home(&crate::root_dir::default_home_dir())
 }
 
 #[tauri::command]
@@ -346,7 +327,7 @@ pub fn onboarding_set_skills_dir(
     dir: String,
     create_if_missing: Option<bool>,
 ) -> Result<OnboardingSetSkillsDirResult, String> {
-    let home = default_home_dir();
+    let home = crate::root_dir::default_home_dir();
     let result =
         onboarding_set_skills_dir_with_home(&home, &dir, create_if_missing.unwrap_or(false))?;
     let state = onboarding_get_state_with_home(&home)?;
@@ -360,7 +341,7 @@ pub fn onboarding_set_skills_dir(
 
 #[tauri::command]
 pub fn onboarding_complete(auto_sync: bool) -> Result<OnboardingCompleteResult, String> {
-    let home = default_home_dir();
+    let home = crate::root_dir::default_home_dir();
     let result = onboarding_complete_with_home(&home, auto_sync)?;
     let state = onboarding_get_state_with_home(&home)?;
     if !state.skills_dir.trim().is_empty() {
@@ -373,7 +354,7 @@ pub fn onboarding_complete(auto_sync: bool) -> Result<OnboardingCompleteResult, 
 
 #[tauri::command]
 pub fn onboarding_import_installed_skills() -> Result<OnboardingImportSkillsResult, String> {
-    onboarding_import_installed_skills_with_home(&default_home_dir())
+    onboarding_import_installed_skills_with_home(&crate::root_dir::default_home_dir())
 }
 
 #[cfg(test)]
@@ -543,7 +524,7 @@ mod tests {
     }
 
     #[test]
-    fn onboarding_import_installed_skills_reads_codex_multi_source_dirs() {
+    fn onboarding_import_installed_skills_ignores_package_paths() {
         let _guard = lock_env();
         let home = temp_home();
         fs::create_dir_all(
@@ -581,8 +562,8 @@ mod tests {
         let result =
             onboarding_import_installed_skills_with_home(&home).expect("import installed skills");
         assert!(result.success);
-        assert_eq!(result.detected_total, 2);
-        assert_eq!(result.imported_total, 2);
+        assert_eq!(result.detected_total, 0);
+        assert_eq!(result.imported_total, 0);
         assert_eq!(result.skipped_existing_total, 0);
     }
 }

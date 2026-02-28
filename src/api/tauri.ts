@@ -118,10 +118,12 @@ export type ToolStatus = {
   icon?: string;
   skillsDir: string;
   rulesPath: string;
+  pathSource: string;
   exists: boolean;
   configured: boolean;
   syncedSkills: number;
   syncMode: "symlink" | "copy" | "none" | string;
+  lastSyncTime?: string;
   autoSync: boolean;
   trackingEnabled: boolean;
   hookConfigured: boolean;

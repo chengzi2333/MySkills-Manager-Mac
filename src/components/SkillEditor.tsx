@@ -2,10 +2,12 @@
 import { useEffect, useState } from "react";
 
 import {
+  setupStatus,
   skillsGetContent,
   skillsSaveContent,
   type SkillMeta,
 } from "../api/tauri";
+import { copyModeToolsRequiringResync } from "../domain/copyModeWarning";
 import {
   fromEditableDocument,
   toEditableDocument,
@@ -46,7 +48,21 @@ export default function SkillEditor({ skill, onClose, onSaved }: Props) {
     try {
       const content = fromEditableDocument(doc);
       await skillsSaveContent(skill.name, content);
-      setStatus(t("editor.saved"));
+
+      let nextStatus = t("editor.saved");
+      try {
+        const tools = await setupStatus();
+        const copyModeTools = copyModeToolsRequiringResync(tools);
+        if (copyModeTools.length > 0) {
+          nextStatus = `${nextStatus} ${t("editor.copyModeWarning", {
+            tools: copyModeTools.join(", "),
+          })}`;
+        }
+      } catch {
+        // Save has already succeeded; skip warning if setup status cannot be read.
+      }
+
+      setStatus(nextStatus);
       onSaved();
     } catch (err) {
       setStatus(String(err));

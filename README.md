@@ -51,6 +51,18 @@ C:\Users\Keith\.cargo\bin\cargo.exe tauri dev
 C:\Users\Keith\.cargo\bin\cargo.exe tauri build --debug
 ```
 
+## Visible Launcher File
+
+To create a top-level visible launcher named `Skillar.exe`:
+
+```bash
+npm run build:desktop
+```
+
+Output:
+
+- `release/Skillar.exe`
+
 ## Notes
 
 - Default skills root: `~/my-skills`

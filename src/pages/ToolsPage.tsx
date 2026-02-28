@@ -12,8 +12,7 @@ import {
   type SetupApplyResult,
   type ToolStatus,
 } from "../api/tauri";
-import { IconClose, IconFolder, IconPlus, IconRefresh, IconSave } from "../components/icons";
-import ToolLogo from "../components/ToolLogo";
+import { IconClose, IconPlus, IconRefresh, IconSave } from "../components/icons";
 import { useI18n } from "../i18n/I18nProvider";
 import {
   buildPathPickerOptions,
@@ -22,31 +21,18 @@ import {
   type PathPickerTarget,
   type ToolPathDraft,
 } from "./toolsPathPicker";
+import ToolCard from "./tools/ToolCard";
+import CustomToolFormCard from "./tools/CustomToolFormCard";
+import { EMPTY_CUSTOM_TOOL_FORM, type CustomToolForm } from "./tools/customToolForm";
 import "./ToolsPage.css";
 
-type CustomToolForm = {
-  name: string;
-  id: string;
-  skillsDir: string;
-  rulesFile: string;
-  icon: string;
-};
-
-const EMPTY_FORM: CustomToolForm = {
-  name: "",
-  id: "",
-  skillsDir: "",
-  rulesFile: "",
-  icon: "",
-};
-
 export default function ToolsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [tools, setTools] = useState<ToolStatus[]>([]);
   const [pathDrafts, setPathDrafts] = useState<Record<string, ToolPathDraft>>({});
   const [status, setStatus] = useState("");
   const [applyResults, setApplyResults] = useState<SetupApplyResult[]>([]);
-  const [form, setForm] = useState<CustomToolForm>(EMPTY_FORM);
+  const [form, setForm] = useState<CustomToolForm>(EMPTY_CUSTOM_TOOL_FORM);
   const [busy, setBusy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [savingPathToolId, setSavingPathToolId] = useState<string | null>(null);
@@ -180,7 +166,7 @@ export default function ToolsPage() {
         rulesFile: form.rulesFile.trim() || undefined,
         icon: form.icon.trim() || undefined,
       });
-      setForm(EMPTY_FORM);
+      setForm(EMPTY_CUSTOM_TOOL_FORM);
       setShowCustomForm(false);
       await loadStatus();
       setStatus(t("tools.custom.added"));
@@ -275,184 +261,6 @@ export default function ToolsPage() {
     setForm((prev) => ({ ...prev, rulesFile: selectedPath }));
   }
 
-  function renderToolCard(tool: ToolStatus, installed: boolean) {
-    const draft = pathDrafts[tool.id] ?? {
-      skillsDir: tool.skillsDir,
-      rulesPath: tool.rulesPath ?? "",
-    };
-    const hasPathChange =
-      normalizedPath(draft.skillsDir) !== normalizedPath(tool.skillsDir) ||
-      normalizedPath(draft.rulesPath) !== normalizedPath(tool.rulesPath);
-    const savingCurrentTool = savingPathToolId === tool.id;
-    const syncingCurrentTool = syncingToolId === tool.id;
-    const togglingCurrentTool = togglingAutoToolId === tool.id;
-    const togglingTrackingCurrentTool = togglingTrackingToolId === tool.id;
-
-    return (
-      <article key={tool.id} className={`tool-card ${installed ? "" : "tool-card-uninstalled"}`.trim()}>
-        <header className="tool-card-header">
-          <div className="tool-card-identity">
-            <ToolLogo id={tool.id} name={tool.name} icon={tool.icon} />
-            <div className="tool-card-title-wrap">
-              <div className="tool-card-title-row">
-                <h3 className="tool-card-title">{tool.name}</h3>
-                <span className={`tool-card-badge ${installed ? "ok" : "neutral"}`}>
-                  {installed ? t("tools.status.detected") : t("tools.status.notDetected")}
-                </span>
-                {tool.syncMode !== "none" && (
-                  <span className="tool-card-badge neutral">{tool.syncMode.toUpperCase()}</span>
-                )}
-                {tool.isCustom && <span className="tool-card-badge neutral">{t("tools.custom")}</span>}
-              </div>
-              <p className="tool-card-id">ID: {tool.id}</p>
-            </div>
-          </div>
-          <div className="tool-card-toggles">
-            <div className="tool-card-toggle-wrap">
-              <span className="tool-switch-label">
-                {t("tools.auto.toggle")}
-              </span>
-              <button
-                type="button"
-                className={`tool-switch ${tool.autoSync ? "active" : ""}`}
-                aria-pressed={tool.autoSync}
-                aria-label={`${tool.name} auto sync toggle`}
-                onClick={() => void handleToggleAutoSync(tool)}
-                disabled={busy || togglingCurrentTool}
-              >
-                <span className="tool-switch-thumb" />
-              </button>
-            </div>
-            <div className="tool-card-toggle-wrap">
-              <span className="tool-switch-label">
-                {t("tools.tracking.toggle")}
-              </span>
-              <button
-                type="button"
-                className={`tool-switch ${tool.trackingEnabled ? "active" : ""}`}
-                aria-pressed={tool.trackingEnabled}
-                aria-label={`${tool.name} tracking toggle`}
-                onClick={() => void handleToggleTracking(tool)}
-                disabled={busy || togglingTrackingCurrentTool}
-              >
-                <span className="tool-switch-thumb" />
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div className="tool-card-divider" />
-
-        <details className="tool-paths-accordion">
-          <summary className="tool-paths-summary">{t("tools.path.section")}</summary>
-          <div className="tool-card-paths">
-            <label className="tool-path-field">
-              <span className="tool-path-label">{t("tools.path.rules")}</span>
-              <div className="tool-path-row">
-                <input
-                  className="field-input tools-path-input"
-                  value={draft.rulesPath}
-                  onChange={(e) =>
-                    setPathDrafts((prev) => ({
-                      ...prev,
-                      [tool.id]: { ...draft, rulesPath: e.target.value },
-                    }))
-                  }
-                  placeholder="C:\\Users\\Keith\\.codex\\AGENTS.md"
-                />
-                <button
-                  type="button"
-                  className="tool-path-picker"
-                  onClick={() => void handlePickToolPath(tool.id, "rules")}
-                  disabled={busy || savingCurrentTool}
-                  title={t("tools.path.pickFile")}
-                  aria-label={t("tools.path.pickFile")}
-                >
-                  <IconFolder size={15} />
-                </button>
-              </div>
-            </label>
-
-            <label className="tool-path-field">
-              <span className="tool-path-label">{t("tools.path.skills")}</span>
-              <div className="tool-path-row">
-                <input
-                  className="field-input tools-path-input"
-                  value={draft.skillsDir}
-                  onChange={(e) =>
-                    setPathDrafts((prev) => ({
-                      ...prev,
-                      [tool.id]: { ...draft, skillsDir: e.target.value },
-                    }))
-                  }
-                  placeholder="C:\\Users\\Keith\\.codex\\skills"
-                />
-                <button
-                  type="button"
-                  className="tool-path-picker"
-                  onClick={() => void handlePickToolPath(tool.id, "skills")}
-                  disabled={busy || savingCurrentTool}
-                  title={t("tools.path.pickDir")}
-                  aria-label={t("tools.path.pickDir")}
-                >
-                  <IconFolder size={15} />
-                </button>
-              </div>
-            </label>
-          </div>
-        </details>
-
-        <footer className="tool-card-footer">
-          <div className="tool-card-meta">
-            <span>{t("tools.syncedSkills")}: {tool.syncedSkills}</span>
-            <span>{t("tools.syncMode")}: {tool.syncMode}</span>
-          </div>
-
-          <div className="tool-card-flags">
-            <span className={`tool-card-badge ${tool.configured ? "ok" : "warn"}`}>
-              {tool.configured ? t("tools.flag.rulesOk") : t("tools.flag.rulesMissing")}
-            </span>
-            {tool.id === "claude-code" && (
-              <span className={`tool-card-badge ${tool.hookConfigured ? "ok" : "warn"}`}>
-                {tool.hookConfigured ? t("tools.flag.hookOk") : t("tools.flag.hookMissing")}
-              </span>
-            )}
-          </div>
-        </footer>
-
-        <div className="tool-card-actions">
-          {installed && (
-            <button
-              type="button"
-              className="btn btn-primary tool-card-action-btn"
-              onClick={() => void handleManualSync(tool)}
-              disabled={busy || syncingCurrentTool}
-            >
-              {syncingCurrentTool ? t("tools.manual.syncing") : t("tools.manual.button")}
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-ghost tool-card-action-btn"
-            onClick={() => void handleSaveToolPaths(tool)}
-            disabled={busy || savingCurrentTool || !hasPathChange || !normalizedPath(draft.skillsDir)}
-          >
-            {savingCurrentTool ? t("tools.path.saving") : t("tools.path.save")}
-          </button>
-          {tool.isCustom && (
-            <button
-              className="btn btn-ghost tool-card-action-btn"
-              onClick={() => void handleRemoveCustomTool(tool.id)}
-              disabled={busy || savingCurrentTool}
-            >
-              {t("tools.remove")}
-            </button>
-          )}
-        </div>
-      </article>
-    );
-  }
-
   return (
     <div className="page animate-fadein tools-page">
       <header className="page-header tools-page-header">
@@ -492,101 +300,97 @@ export default function ToolsPage() {
       <div className="tools-sections">
         <section className="tools-section">
           <h2 className="tools-section-title">{t("tools.section.installed", { count: installedTools.length })}</h2>
-          <div className="tools-grid">{installedTools.map((tool) => renderToolCard(tool, true))}</div>
+          <div className="tools-grid">
+            {installedTools.map((tool) => {
+              const draft = pathDrafts[tool.id] ?? {
+                skillsDir: tool.skillsDir,
+                rulesPath: tool.rulesPath ?? "",
+              };
+              return (
+                <ToolCard
+                  key={tool.id}
+                  tool={tool}
+                  installed
+                  draft={draft}
+                  hasPathChange={
+                    normalizedPath(draft.skillsDir) !== normalizedPath(tool.skillsDir) ||
+                    normalizedPath(draft.rulesPath) !== normalizedPath(tool.rulesPath)
+                  }
+                  busy={busy}
+                  savingCurrentTool={savingPathToolId === tool.id}
+                  syncingCurrentTool={syncingToolId === tool.id}
+                  togglingAutoCurrentTool={togglingAutoToolId === tool.id}
+                  togglingTrackingCurrentTool={togglingTrackingToolId === tool.id}
+                  skillsDirConfigured={Boolean(normalizedPath(draft.skillsDir))}
+                  locale={locale}
+                  t={t}
+                  onDraftChange={(nextDraft) =>
+                    setPathDrafts((prev) => ({ ...prev, [tool.id]: nextDraft }))
+                  }
+                  onPickToolPath={(target) => void handlePickToolPath(tool.id, target)}
+                  onManualSync={() => void handleManualSync(tool)}
+                  onToggleAutoSync={() => void handleToggleAutoSync(tool)}
+                  onToggleTracking={() => void handleToggleTracking(tool)}
+                  onSaveToolPaths={() => void handleSaveToolPaths(tool)}
+                  onRemoveCustomTool={() => void handleRemoveCustomTool(tool.id)}
+                />
+              );
+            })}
+          </div>
         </section>
 
         <section className="tools-section">
           <h2 className="tools-section-title">{t("tools.section.uninstalled", { count: uninstalledTools.length })}</h2>
-          <div className="tools-grid">{uninstalledTools.map((tool) => renderToolCard(tool, false))}</div>
+          <div className="tools-grid">
+            {uninstalledTools.map((tool) => {
+              const draft = pathDrafts[tool.id] ?? {
+                skillsDir: tool.skillsDir,
+                rulesPath: tool.rulesPath ?? "",
+              };
+              return (
+                <ToolCard
+                  key={tool.id}
+                  tool={tool}
+                  installed={false}
+                  draft={draft}
+                  hasPathChange={
+                    normalizedPath(draft.skillsDir) !== normalizedPath(tool.skillsDir) ||
+                    normalizedPath(draft.rulesPath) !== normalizedPath(tool.rulesPath)
+                  }
+                  busy={busy}
+                  savingCurrentTool={savingPathToolId === tool.id}
+                  syncingCurrentTool={syncingToolId === tool.id}
+                  togglingAutoCurrentTool={togglingAutoToolId === tool.id}
+                  togglingTrackingCurrentTool={togglingTrackingToolId === tool.id}
+                  skillsDirConfigured={Boolean(normalizedPath(draft.skillsDir))}
+                  locale={locale}
+                  t={t}
+                  onDraftChange={(nextDraft) =>
+                    setPathDrafts((prev) => ({ ...prev, [tool.id]: nextDraft }))
+                  }
+                  onPickToolPath={(target) => void handlePickToolPath(tool.id, target)}
+                  onManualSync={() => void handleManualSync(tool)}
+                  onToggleAutoSync={() => void handleToggleAutoSync(tool)}
+                  onToggleTracking={() => void handleToggleTracking(tool)}
+                  onSaveToolPaths={() => void handleSaveToolPaths(tool)}
+                  onRemoveCustomTool={() => void handleRemoveCustomTool(tool.id)}
+                />
+              );
+            })}
+          </div>
         </section>
       </div>
 
       {showCustomForm && (
-        <article className="chart-card tools-form-card">
-          <header className="tools-form-head">
-            <h3 className="chart-title">{t("tools.form.title")}</h3>
-            <button className="btn btn-ghost tools-form-hide-btn" onClick={() => setShowCustomForm(false)}>
-              <IconClose size={14} />
-              {t("tools.form.hide")}
-            </button>
-          </header>
-          <div className="tools-form-grid">
-            <label className="field">
-              <span className="field-label">{t("tools.form.name")}</span>
-              <input
-                className="field-input"
-                value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Aider"
-              />
-            </label>
-            <label className="field">
-              <span className="field-label">{t("tools.form.id")}</span>
-              <input
-                className="field-input"
-                value={form.id}
-                onChange={(e) => setForm((prev) => ({ ...prev, id: e.target.value }))}
-                placeholder="aider"
-              />
-            </label>
-            <label className="field field-wide">
-              <span className="field-label">{t("tools.form.skillsDir")}</span>
-              <div className="tool-path-row">
-                <input
-                  className="field-input tools-path-input"
-                  value={form.skillsDir}
-                  onChange={(e) => setForm((prev) => ({ ...prev, skillsDir: e.target.value }))}
-                  placeholder="C:\\Users\\Keith\\.aider\\skills"
-                />
-                <button
-                  type="button"
-                  className="tool-path-picker"
-                  onClick={() => void handlePickCustomFormPath("skills")}
-                  disabled={submitting}
-                  title={t("tools.path.pickDir")}
-                  aria-label={t("tools.path.pickDir")}
-                >
-                  <IconFolder size={15} />
-                </button>
-              </div>
-            </label>
-            <label className="field field-wide">
-              <span className="field-label">{t("tools.form.rulesFile")}</span>
-              <div className="tool-path-row">
-                <input
-                  className="field-input tools-path-input"
-                  value={form.rulesFile}
-                  onChange={(e) => setForm((prev) => ({ ...prev, rulesFile: e.target.value }))}
-                  placeholder="C:\\Users\\Keith\\.aider\\AGENTS.md"
-                />
-                <button
-                  type="button"
-                  className="tool-path-picker"
-                  onClick={() => void handlePickCustomFormPath("rules")}
-                  disabled={submitting}
-                  title={t("tools.path.pickFile")}
-                  aria-label={t("tools.path.pickFile")}
-                >
-                  <IconFolder size={15} />
-                </button>
-              </div>
-            </label>
-            <label className="field">
-              <span className="field-label">{t("tools.form.icon")}</span>
-              <input
-                className="field-input"
-                value={form.icon}
-                onChange={(e) => setForm((prev) => ({ ...prev, icon: e.target.value }))}
-                placeholder="openai | anthropic | /tool-logos/custom.svg"
-              />
-            </label>
-          </div>
-          <div className="tools-form-actions">
-            <button className="btn btn-primary" onClick={() => void handleAddCustomTool()} disabled={submitting}>
-              {submitting ? t("tools.form.adding") : t("tools.form.add")}
-            </button>
-          </div>
-        </article>
+        <CustomToolFormCard
+          form={form}
+          submitting={submitting}
+          t={t}
+          onHide={() => setShowCustomForm(false)}
+          onChange={setForm}
+          onPickPath={(target) => void handlePickCustomFormPath(target)}
+          onSubmit={() => void handleAddCustomTool()}
+        />
       )}
 
       {applyResults.length > 0 && (

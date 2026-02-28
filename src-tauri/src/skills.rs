@@ -192,12 +192,15 @@ pub fn skills_get_content(name: String) -> Result<SkillDocument, String> {
 #[tauri::command]
 pub fn skills_save_content(name: String, content: String) -> Result<SaveResult, String> {
     let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
-    save_content(
-        &crate::root_dir::default_root_dir(),
-        &name,
-        &content,
-        &today,
-    )
+    let skills_root = crate::root_dir::default_root_dir();
+    let result = save_content(&skills_root, &name, &content, &today)?;
+    let home = crate::root_dir::default_home_dir();
+    if let Err(err) =
+        crate::setup::sync_saved_skill_to_copy_tools_with_home(&home, &skills_root, &name)
+    {
+        eprintln!("copy-mode incremental sync failed: {err}");
+    }
+    Ok(result)
 }
 
 #[cfg(test)]

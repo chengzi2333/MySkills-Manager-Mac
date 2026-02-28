@@ -151,7 +151,7 @@
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #f7ffff;
+  color: var(--accent-contrast);
 }
 
 .btn-primary:hover:not(:disabled) {

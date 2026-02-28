@@ -1,29 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { useEffect, useMemo, useState } from "react";
 
-import {
-  setupAddCustomTool,
-  setupApply,
-  setupRemoveCustomTool,
-  setupSetToolAutoSync,
-  setupSetToolTrackingEnabled,
-  setupStatus,
-  setupUpdateToolPaths,
-  type SetupApplyResult,
-  type ToolStatus,
-} from "../api/tauri";
+import { type SetupApplyResult, type ToolStatus } from "../api/tauri";
 import { IconClose, IconPlus, IconRefresh, IconSave } from "../components/icons";
 import { useI18n } from "../i18n/I18nProvider";
-import {
-  buildPathPickerOptions,
-  pickPathValueFromDialogResult,
-  updateDraftWithPickedPath,
-  type PathPickerTarget,
-  type ToolPathDraft,
-} from "./toolsPathPicker";
-import ToolCard from "./tools/ToolCard";
+import { type ToolPathDraft } from "./toolsPathPicker";
 import CustomToolFormCard from "./tools/CustomToolFormCard";
+import ToolSection from "./tools/ToolSection";
 import { EMPTY_CUSTOM_TOOL_FORM, type CustomToolForm } from "./tools/customToolForm";
+import { useToolsPageActions } from "./tools/useToolsPageActions";
 import "./ToolsPage.css";
 
 export default function ToolsPage() {
@@ -41,34 +25,6 @@ export default function ToolsPage() {
   const [togglingTrackingToolId, setTogglingTrackingToolId] = useState<string | null>(null);
   const [showCustomForm, setShowCustomForm] = useState(false);
 
-  const loadStatus = useCallback(async () => {
-    setBusy(true);
-    setStatus(t("tools.loading"));
-    try {
-      const data = await setupStatus();
-      setTools(data);
-      setPathDrafts(() => {
-        const next: Record<string, ToolPathDraft> = {};
-        for (const tool of data) {
-          next[tool.id] = {
-            skillsDir: tool.skillsDir,
-            rulesPath: tool.rulesPath ?? "",
-          };
-        }
-        return next;
-      });
-      setStatus("");
-    } catch (e: unknown) {
-      setStatus(String(e));
-    } finally {
-      setBusy(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    void loadStatus();
-  }, [loadStatus]);
-
   const installedTools = useMemo(() => tools.filter((tool) => tool.exists), [tools]);
   const uninstalledTools = useMemo(() => tools.filter((tool) => !tool.exists), [tools]);
   const autoToolIds = useMemo(
@@ -76,190 +32,39 @@ export default function ToolsPage() {
     [tools],
   );
 
-  function normalizedPath(value: string | undefined) {
-    return (value ?? "").trim();
-  }
+  const {
+    loadStatus,
+    handleApplyAutoTools,
+    handleManualSync,
+    handleToggleAutoSync,
+    handleToggleTracking,
+    handleAddCustomTool,
+    handleRemoveCustomTool,
+    handleSaveToolPaths,
+    handlePickToolPath,
+    handlePickCustomFormPath,
+  } = useToolsPageActions({
+    t,
+    autoToolIds,
+    form,
+    pathDrafts,
+    setTools,
+    setPathDrafts,
+    setStatus,
+    setApplyResults,
+    setForm,
+    setBusy,
+    setSubmitting,
+    setSavingPathToolId,
+    setSyncingToolId,
+    setTogglingAutoToolId,
+    setTogglingTrackingToolId,
+    setShowCustomForm,
+  });
 
-  async function handleApplyAutoTools() {
-    if (autoToolIds.length === 0) {
-      setStatus(t("tools.apply.auto.none"));
-      return;
-    }
-    setBusy(true);
-    setStatus(t("tools.syncing"));
-    try {
-      const results = await setupApply(autoToolIds);
-      setApplyResults(results);
-      await loadStatus();
-      setStatus("");
-    } catch (e: unknown) {
-      setStatus(String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleManualSync(tool: ToolStatus) {
-    setSyncingToolId(tool.id);
-    setStatus(t("tools.syncing"));
-    try {
-      const results = await setupApply([tool.id]);
-      setApplyResults(results);
-      await loadStatus();
-      setStatus("");
-    } catch (e: unknown) {
-      setStatus(String(e));
-    } finally {
-      setSyncingToolId(null);
-    }
-  }
-
-  async function handleToggleAutoSync(tool: ToolStatus) {
-    setTogglingAutoToolId(tool.id);
-    setStatus(t("tools.auto.updating"));
-    try {
-      await setupSetToolAutoSync(tool.id, !tool.autoSync);
-      setTools((prev) =>
-        prev.map((item) =>
-          item.id === tool.id ? { ...item, autoSync: !item.autoSync } : item,
-        ),
-      );
-      setStatus("");
-    } catch (e: unknown) {
-      setStatus(String(e));
-    } finally {
-      setTogglingAutoToolId(null);
-    }
-  }
-
-  async function handleToggleTracking(tool: ToolStatus) {
-    setTogglingTrackingToolId(tool.id);
-    setStatus(t("tools.tracking.updating"));
-    try {
-      await setupSetToolTrackingEnabled(tool.id, !tool.trackingEnabled);
-      setTools((prev) =>
-        prev.map((item) =>
-          item.id === tool.id ? { ...item, trackingEnabled: !item.trackingEnabled } : item,
-        ),
-      );
-      setStatus("");
-    } catch (e: unknown) {
-      setStatus(String(e));
-    } finally {
-      setTogglingTrackingToolId(null);
-    }
-  }
-
-  async function handleAddCustomTool() {
-    if (!form.name.trim() || !form.id.trim() || !form.skillsDir.trim()) {
-      setStatus(t("tools.validation.required"));
-      return;
-    }
-
-    setSubmitting(true);
-    setStatus(t("tools.custom.adding"));
-    try {
-      await setupAddCustomTool({
-        name: form.name.trim(),
-        id: form.id.trim(),
-        skillsDir: form.skillsDir.trim(),
-        rulesFile: form.rulesFile.trim() || undefined,
-        icon: form.icon.trim() || undefined,
-      });
-      setForm(EMPTY_CUSTOM_TOOL_FORM);
-      setShowCustomForm(false);
-      await loadStatus();
-      setStatus(t("tools.custom.added"));
-    } catch (e: unknown) {
-      setStatus(String(e));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleRemoveCustomTool(id: string) {
-    setBusy(true);
-    setStatus(t("tools.custom.removing"));
-    try {
-      await setupRemoveCustomTool(id);
-      await loadStatus();
-      setStatus(t("tools.custom.removed"));
-    } catch (e: unknown) {
-      setStatus(String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleSaveToolPaths(tool: ToolStatus) {
-    const draft = pathDrafts[tool.id];
-    if (!draft || !normalizedPath(draft.skillsDir)) {
-      setStatus(t("tools.validation.skillsRequired"));
-      return;
-    }
-
-    setSavingPathToolId(tool.id);
-    setStatus(t("tools.path.saving"));
-    try {
-      await setupUpdateToolPaths(
-        tool.id,
-        normalizedPath(draft.skillsDir),
-        normalizedPath(draft.rulesPath) || undefined,
-      );
-      await loadStatus();
-      setStatus(t("tools.path.saved"));
-    } catch (e: unknown) {
-      setStatus(String(e));
-    } finally {
-      setSavingPathToolId(null);
-    }
-  }
-
-  async function handlePickToolPath(toolId: string, target: PathPickerTarget) {
-    const draft = pathDrafts[toolId];
-    if (!draft) {
-      return;
-    }
-
-    const selectedResult = await open({
-      ...buildPathPickerOptions(
-        target,
-        target === "skills" ? draft.skillsDir : draft.rulesPath,
-      ),
-      title: target === "skills" ? t("tools.path.pickDir") : t("tools.path.pickFile"),
-    });
-
-    const selectedPath = pickPathValueFromDialogResult(selectedResult);
-    setPathDrafts((prev) => {
-      const currentDraft = prev[toolId];
-      if (!currentDraft) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [toolId]: updateDraftWithPickedPath(currentDraft, target, selectedPath),
-      };
-    });
-  }
-
-  async function handlePickCustomFormPath(target: PathPickerTarget) {
-    const selectedResult = await open({
-      ...buildPathPickerOptions(
-        target,
-        target === "skills" ? form.skillsDir : form.rulesFile,
-      ),
-      title: target === "skills" ? t("tools.path.pickDir") : t("tools.path.pickFile"),
-    });
-    const selectedPath = pickPathValueFromDialogResult(selectedResult);
-    if (!selectedPath) {
-      return;
-    }
-    if (target === "skills") {
-      setForm((prev) => ({ ...prev, skillsDir: selectedPath }));
-      return;
-    }
-    setForm((prev) => ({ ...prev, rulesFile: selectedPath }));
-  }
+  useEffect(() => {
+    void loadStatus();
+  }, [loadStatus]);
 
   return (
     <div className="page animate-fadein tools-page">
@@ -298,87 +103,51 @@ export default function ToolsPage() {
       </header>
 
       <div className="tools-sections">
-        <section className="tools-section">
-          <h2 className="tools-section-title">{t("tools.section.installed", { count: installedTools.length })}</h2>
-          <div className="tools-grid">
-            {installedTools.map((tool) => {
-              const draft = pathDrafts[tool.id] ?? {
-                skillsDir: tool.skillsDir,
-                rulesPath: tool.rulesPath ?? "",
-              };
-              return (
-                <ToolCard
-                  key={tool.id}
-                  tool={tool}
-                  installed
-                  draft={draft}
-                  hasPathChange={
-                    normalizedPath(draft.skillsDir) !== normalizedPath(tool.skillsDir) ||
-                    normalizedPath(draft.rulesPath) !== normalizedPath(tool.rulesPath)
-                  }
-                  busy={busy}
-                  savingCurrentTool={savingPathToolId === tool.id}
-                  syncingCurrentTool={syncingToolId === tool.id}
-                  togglingAutoCurrentTool={togglingAutoToolId === tool.id}
-                  togglingTrackingCurrentTool={togglingTrackingToolId === tool.id}
-                  skillsDirConfigured={Boolean(normalizedPath(draft.skillsDir))}
-                  locale={locale}
-                  t={t}
-                  onDraftChange={(nextDraft) =>
-                    setPathDrafts((prev) => ({ ...prev, [tool.id]: nextDraft }))
-                  }
-                  onPickToolPath={(target) => void handlePickToolPath(tool.id, target)}
-                  onManualSync={() => void handleManualSync(tool)}
-                  onToggleAutoSync={() => void handleToggleAutoSync(tool)}
-                  onToggleTracking={() => void handleToggleTracking(tool)}
-                  onSaveToolPaths={() => void handleSaveToolPaths(tool)}
-                  onRemoveCustomTool={() => void handleRemoveCustomTool(tool.id)}
-                />
-              );
-            })}
-          </div>
-        </section>
+        <ToolSection
+          title={t("tools.section.installed", { count: installedTools.length })}
+          tools={installedTools}
+          installed
+          pathDrafts={pathDrafts}
+          busy={busy}
+          savingPathToolId={savingPathToolId}
+          syncingToolId={syncingToolId}
+          togglingAutoToolId={togglingAutoToolId}
+          togglingTrackingToolId={togglingTrackingToolId}
+          locale={locale}
+          t={t}
+          onDraftChange={(toolId, nextDraft) =>
+            setPathDrafts((prev) => ({ ...prev, [toolId]: nextDraft }))
+          }
+          onPickToolPath={(toolId, target) => void handlePickToolPath(toolId, target)}
+          onManualSync={(tool) => void handleManualSync(tool)}
+          onToggleAutoSync={(tool) => void handleToggleAutoSync(tool)}
+          onToggleTracking={(tool) => void handleToggleTracking(tool)}
+          onSaveToolPaths={(tool) => void handleSaveToolPaths(tool)}
+          onRemoveCustomTool={(toolId) => void handleRemoveCustomTool(toolId)}
+        />
 
-        <section className="tools-section">
-          <h2 className="tools-section-title">{t("tools.section.uninstalled", { count: uninstalledTools.length })}</h2>
-          <div className="tools-grid">
-            {uninstalledTools.map((tool) => {
-              const draft = pathDrafts[tool.id] ?? {
-                skillsDir: tool.skillsDir,
-                rulesPath: tool.rulesPath ?? "",
-              };
-              return (
-                <ToolCard
-                  key={tool.id}
-                  tool={tool}
-                  installed={false}
-                  draft={draft}
-                  hasPathChange={
-                    normalizedPath(draft.skillsDir) !== normalizedPath(tool.skillsDir) ||
-                    normalizedPath(draft.rulesPath) !== normalizedPath(tool.rulesPath)
-                  }
-                  busy={busy}
-                  savingCurrentTool={savingPathToolId === tool.id}
-                  syncingCurrentTool={syncingToolId === tool.id}
-                  togglingAutoCurrentTool={togglingAutoToolId === tool.id}
-                  togglingTrackingCurrentTool={togglingTrackingToolId === tool.id}
-                  skillsDirConfigured={Boolean(normalizedPath(draft.skillsDir))}
-                  locale={locale}
-                  t={t}
-                  onDraftChange={(nextDraft) =>
-                    setPathDrafts((prev) => ({ ...prev, [tool.id]: nextDraft }))
-                  }
-                  onPickToolPath={(target) => void handlePickToolPath(tool.id, target)}
-                  onManualSync={() => void handleManualSync(tool)}
-                  onToggleAutoSync={() => void handleToggleAutoSync(tool)}
-                  onToggleTracking={() => void handleToggleTracking(tool)}
-                  onSaveToolPaths={() => void handleSaveToolPaths(tool)}
-                  onRemoveCustomTool={() => void handleRemoveCustomTool(tool.id)}
-                />
-              );
-            })}
-          </div>
-        </section>
+        <ToolSection
+          title={t("tools.section.uninstalled", { count: uninstalledTools.length })}
+          tools={uninstalledTools}
+          installed={false}
+          pathDrafts={pathDrafts}
+          busy={busy}
+          savingPathToolId={savingPathToolId}
+          syncingToolId={syncingToolId}
+          togglingAutoToolId={togglingAutoToolId}
+          togglingTrackingToolId={togglingTrackingToolId}
+          locale={locale}
+          t={t}
+          onDraftChange={(toolId, nextDraft) =>
+            setPathDrafts((prev) => ({ ...prev, [toolId]: nextDraft }))
+          }
+          onPickToolPath={(toolId, target) => void handlePickToolPath(toolId, target)}
+          onManualSync={(tool) => void handleManualSync(tool)}
+          onToggleAutoSync={(tool) => void handleToggleAutoSync(tool)}
+          onToggleTracking={(tool) => void handleToggleTracking(tool)}
+          onSaveToolPaths={(tool) => void handleSaveToolPaths(tool)}
+          onRemoveCustomTool={(toolId) => void handleRemoveCustomTool(toolId)}
+        />
       </div>
 
       {showCustomForm && (

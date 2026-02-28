@@ -2,16 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import { logsGet, statsGet, type LogsResult, type SkillMeta, type StatsResult } from "../api/tauri";
 import { IconChevronLeft, IconChevronRight } from "../components/icons";
+import { toIsoEnd, toIsoStart } from "../domain/logDateRange";
 import { useI18n } from "../i18n/I18nProvider";
 import "./LogsPage.css";
-
-function toIsoStart(d: string) {
-  return d ? `${d}T00:00:00Z` : undefined;
-}
-
-function toIsoEnd(d: string) {
-  return d ? `${d}T23:59:59Z` : undefined;
-}
 
 type Props = { skills: SkillMeta[] };
 

@@ -1,34 +1,50 @@
 /* ===== Design Tokens ===== */
 
 :root {
-  /* Color system (light) */
-  --bg-primary: #e9f2f3;
-  --bg-app: #f3f8f8;
-  --bg-sidebar: #f7fbfb;
-  --bg-card: #ffffff;
-  --bg-card-hover: #ecf6f7;
-  --bg-input: #f8fbfb;
-  --border-card: #d4e2e5;
-  --border-input: #c5d6da;
-  --border-active: #14b8a6;
-  --text-primary: #12303a;
-  --text-secondary: #476674;
-  --text-muted: #708b96;
-  --accent: #0d9488;
-  --accent-hover: #0b7f74;
-  --accent-light: #dbf3f0;
-  --accent-strong: #115e59;
-  --success: #15803d;
-  --success-bg: #dcfce7;
-  --warning: #b45309;
-  --warning-bg: #ffedd5;
-  --danger: #b91c1c;
-  --danger-bg: #fee2e2;
-  --focus-ring: 0 0 0 3px rgba(13, 148, 136, 0.28);
+  /* Color system (starship-neutral) */
+  --bg-primary: #242628;
+  --bg-app: #2b2e31;
+  --bg-sidebar: #31353a;
+  --bg-card: #363b40;
+  --bg-card-hover: #40464c;
+  --bg-input: #2a2e33;
+  --border-card: #4a5058;
+  --border-input: #5a6170;
+  --border-active: #5f998e;
+  --text-primary: #e8ecf2;
+  --text-secondary: #c4ccd7;
+  --text-muted: #95a1b2;
+  --accent: #79aefc;
+  --accent-hover: #8ab9ff;
+  --accent-light: rgba(121, 174, 252, 0.2);
+  --accent-strong: #5e7fa8;
+  --accent-contrast: #0f1623;
+  --success: #7ea36d;
+  --success-bg: rgba(126, 163, 109, 0.2);
+  --warning: #c3a05e;
+  --warning-bg: rgba(195, 160, 94, 0.22);
+  --danger: #c26f71;
+  --danger-bg: rgba(194, 111, 113, 0.22);
+  --focus-ring: 0 0 0 3px rgba(121, 174, 252, 0.4);
+
+  /* Prism accents */
+  --prism-orange: #b5794a;
+  --prism-yellow: #c3a05e;
+  --prism-aqua: #5f998e;
+  --prism-blue: #5e7fa8;
+  --prism-purple: #8a739f;
+
+  /* Chart palette */
+  --chart-1: #5e7fa8;
+  --chart-2: #5f998e;
+  --chart-3: #8a739f;
+  --chart-4: #7ea36d;
+  --chart-5: #b5794a;
+  --chart-6: #c3a05e;
 
   /* Typography */
   --font-body: "IBM Plex Sans", "Segoe UI", "PingFang SC", sans-serif;
-  --font-heading: "JetBrains Mono", "Cascadia Code", "SFMono-Regular", monospace;
+  --font-heading: "Space Grotesk", "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
   --text-xs: 0.76rem;
   --text-sm: 0.84rem;
@@ -53,9 +69,9 @@
   --radius-pill: 999px;
 
   /* Shadows */
-  --shadow-card: 0 10px 24px rgba(17, 52, 64, 0.08);
-  --shadow-card-hover: 0 14px 32px rgba(17, 52, 64, 0.12);
-  --shadow-drawer: -20px 0 48px rgba(9, 24, 33, 0.22);
+  --shadow-card: 0 12px 28px rgba(0, 0, 0, 0.28);
+  --shadow-card-hover: 0 18px 36px rgba(0, 0, 0, 0.36);
+  --shadow-drawer: -20px 0 48px rgba(0, 0, 0, 0.46);
 
   /* Layout */
   --control-height: 40px;

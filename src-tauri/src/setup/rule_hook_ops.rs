@@ -2,6 +2,89 @@ use serde_json::{json, Value as JsonValue};
 use std::fs;
 use std::path::Path;
 
+fn contains_any_skill_tracker_entry(raw: &str) -> bool {
+    raw.contains("skill-tracker.sh") || raw.contains("skill-tracker.ps1")
+}
+
+fn claude_hook_command(home: &Path) -> String {
+    #[cfg(target_family = "windows")]
+    {
+        let hook_path = home.join(super::CLAUDE_HOOK_REL_PATH);
+        return format!(
+            "powershell -NoProfile -ExecutionPolicy Bypass -File \"{}\"",
+            hook_path.to_string_lossy()
+        );
+    }
+    #[cfg(not(target_family = "windows"))]
+    {
+        "bash ~/.claude/hooks/skill-tracker.sh".to_string()
+    }
+}
+
+fn claude_hook_script() -> &'static str {
+    #[cfg(target_family = "windows")]
+    {
+        return r#"$inputJson = [Console]::In.ReadToEnd()
+if ([string]::IsNullOrWhiteSpace($inputJson)) { exit 0 }
+
+try {
+  $payload = $inputJson | ConvertFrom-Json
+} catch {
+  exit 0
+}
+
+$filePath = ""
+if ($null -ne $payload.tool_input) {
+  $filePath = [string]$payload.tool_input.file_path
+}
+
+if ([string]::IsNullOrWhiteSpace($filePath) -or -not $filePath.EndsWith("SKILL.md")) {
+  exit 0
+}
+
+$skillName = Split-Path -Path (Split-Path -Path $filePath -Parent) -Leaf
+$sessionId = ""
+if ($null -ne $payload.session_id) { $sessionId = [string]$payload.session_id }
+$cwd = ""
+if ($null -ne $payload.cwd) { $cwd = [string]$payload.cwd }
+$timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+$logDir = Join-Path $env:USERPROFILE "my-skills\.logs"
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+$logFile = Join-Path $logDir "skill-usage.jsonl"
+$entry = @{
+  ts = $timestamp
+  skill = $skillName
+  session = $sessionId
+  cwd = $cwd
+  tool = "claude-code"
+} | ConvertTo-Json -Compress
+
+Add-Content -Path $logFile -Value $entry
+"#;
+    }
+    #[cfg(not(target_family = "windows"))]
+    {
+        r#"#!/bin/bash
+INPUT=$(cat)
+FILE_PATH=$(echo "$INPUT" | jq -r ".tool_input.file_path // empty")
+
+if [[ "$FILE_PATH" != *"SKILL.md" ]]; then
+  exit 0
+fi
+
+SKILL_NAME=$(basename "$(dirname "$FILE_PATH")")
+SESSION_ID=$(echo "$INPUT" | jq -r ".session_id // empty")
+CWD=$(echo "$INPUT" | jq -r ".cwd // empty")
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+mkdir -p ~/my-skills/.logs
+LOG_FILE="$HOME/my-skills/.logs/skill-usage.jsonl"
+echo "{\"ts\":\"$TIMESTAMP\",\"skill\":\"$SKILL_NAME\",\"session\":\"$SESSION_ID\",\"cwd\":\"$CWD\",\"tool\":\"claude-code\"}" >> "$LOG_FILE"
+"#
+    }
+}
+
 pub(super) fn tracking_rule_block(tool_id: &str) -> String {
     format!(
         r#"{start}
@@ -135,24 +218,8 @@ pub(super) fn ensure_claude_hook(home: &Path) -> Result<(), String> {
     }
     super::sync_ops::backup_if_exists(&hook_path)?;
 
-    let script = r#"#!/bin/bash
-INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | jq -r ".tool_input.file_path // empty")
-
-if [[ "$FILE_PATH" != *"SKILL.md" ]]; then
-  exit 0
-fi
-
-SKILL_NAME=$(basename "$(dirname "$FILE_PATH")")
-SESSION_ID=$(echo "$INPUT" | jq -r ".session_id // empty")
-CWD=$(echo "$INPUT" | jq -r ".cwd // empty")
-TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-mkdir -p ~/my-skills/.logs
-LOG_FILE="$HOME/my-skills/.logs/skill-usage.jsonl"
-echo "{\"ts\":\"$TIMESTAMP\",\"skill\":\"$SKILL_NAME\",\"session\":\"$SESSION_ID\",\"cwd\":\"$CWD\",\"tool\":\"claude-code\"}" >> "$LOG_FILE"
-"#;
-    fs::write(&hook_path, script).map_err(|e| format!("Write claude hook failed: {e}"))?;
+    fs::write(&hook_path, claude_hook_script())
+        .map_err(|e| format!("Write claude hook failed: {e}"))?;
 
     #[cfg(unix)]
     {
@@ -203,21 +270,16 @@ echo "{\"ts\":\"$TIMESTAMP\",\"skill\":\"$SKILL_NAME\",\"session\":\"$SESSION_ID
         .and_then(JsonValue::as_array_mut)
         .ok_or_else(|| "Invalid claude PostToolUse config".to_string())?;
 
-    let hook_command = "bash ~/.claude/hooks/skill-tracker.sh";
-    let exists = post_tool_use
-        .iter()
-        .any(|entry| entry.to_string().contains("skill-tracker.sh"));
-    if !exists {
-        post_tool_use.push(json!({
-          "matcher": "Read",
-          "hooks": [
-            {
-              "type": "command",
-              "command": hook_command
-            }
-          ]
-        }));
-    }
+    post_tool_use.retain(|entry| !contains_any_skill_tracker_entry(&entry.to_string()));
+    post_tool_use.push(json!({
+      "matcher": "Read",
+      "hooks": [
+        {
+          "type": "command",
+          "command": claude_hook_command(home)
+        }
+      ]
+    }));
 
     let content = serde_json::to_string_pretty(&settings)
         .map_err(|e| format!("Serialize settings failed: {e}"))?;
@@ -256,7 +318,7 @@ pub(super) fn ensure_claude_hook_removed(home: &Path) -> Result<(), String> {
     };
 
     let before = post_tool_use.len();
-    post_tool_use.retain(|entry| !entry.to_string().contains("skill-tracker.sh"));
+    post_tool_use.retain(|entry| !contains_any_skill_tracker_entry(&entry.to_string()));
     if post_tool_use.len() == before {
         return Ok(());
     }

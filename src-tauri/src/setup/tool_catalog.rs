@@ -20,9 +20,15 @@ struct BuiltInToolDefaults {
 }
 
 #[derive(Debug, Clone)]
-struct ToolPathCandidate {
-    skills_dir: PathBuf,
-    rules_path: Option<PathBuf>,
+pub(super) struct ToolPathCandidate {
+    pub skills_dir: PathBuf,
+    pub rules_path: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct BuiltInToolResolution {
+    pub descriptor: ToolDescriptor,
+    pub candidates: Vec<ToolPathCandidate>,
 }
 
 pub(super) fn is_built_in_tool_id(id: &str) -> bool {
@@ -123,7 +129,17 @@ pub(super) fn built_in_tools(
     home: &Path,
     overrides: &[super::ToolPathOverride],
 ) -> Vec<ToolDescriptor> {
-    let mut resolved = Vec::<ToolDescriptor>::new();
+    built_in_tool_resolutions(home, overrides)
+        .into_iter()
+        .map(|item| item.descriptor)
+        .collect()
+}
+
+pub(super) fn built_in_tool_resolutions(
+    home: &Path,
+    overrides: &[super::ToolPathOverride],
+) -> Vec<BuiltInToolResolution> {
+    let mut matrix = Vec::<BuiltInToolResolution>::new();
 
     for defaults in built_in_defaults(home) {
         if let Some(override_item) = overrides.iter().find(|item| item.id == defaults.id) {
@@ -135,7 +151,7 @@ pub(super) fn built_in_tools(
                     .map(|value| value.trim())
                     .filter(|value| !value.is_empty())
                     .map(PathBuf::from);
-                resolved.push(ToolDescriptor {
+                let descriptor = ToolDescriptor {
                     name: defaults.name.to_string(),
                     id: defaults.id.to_string(),
                     icon: None,
@@ -143,6 +159,10 @@ pub(super) fn built_in_tools(
                     rules_path,
                     path_source: "override".to_string(),
                     is_custom: false,
+                };
+                matrix.push(BuiltInToolResolution {
+                    candidates: candidate_paths_for_tool(home, &defaults),
+                    descriptor: descriptor.clone(),
                 });
                 continue;
             }
@@ -169,7 +189,7 @@ pub(super) fn built_in_tools(
             )
         };
 
-        resolved.push(ToolDescriptor {
+        let descriptor = ToolDescriptor {
             name: defaults.name.to_string(),
             id: defaults.id.to_string(),
             icon: None,
@@ -177,10 +197,14 @@ pub(super) fn built_in_tools(
             rules_path,
             path_source,
             is_custom: false,
+        };
+        matrix.push(BuiltInToolResolution {
+            descriptor: descriptor.clone(),
+            candidates,
         });
     }
 
-    resolved
+    matrix
 }
 
 pub(super) fn custom_tool_to_descriptor(custom: super::CustomTool) -> ToolDescriptor {

@@ -58,7 +58,7 @@ pub(super) fn sync_saved_skill_to_copy_tools_with_home(
             continue;
         }
 
-        let (_, mode, _) = super::detect_sync_stats(&tool.skills_dir)?;
+        let (_, mode, _) = super::status_probe::detect_sync_stats(&tool.skills_dir)?;
         if mode != "copy" {
             continue;
         }

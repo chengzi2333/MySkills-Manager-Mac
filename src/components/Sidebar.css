@@ -1,6 +1,12 @@
 .sidebar-nav {
   background:
-    linear-gradient(180deg, rgba(13, 148, 136, 0.08) 0%, transparent 30%),
+    linear-gradient(
+      165deg,
+      rgba(94, 127, 168, 0.16) 0%,
+      rgba(95, 153, 142, 0.1) 34%,
+      rgba(138, 115, 159, 0.08) 72%,
+      transparent 100%
+    ),
     var(--bg-sidebar);
   border-right: 1px solid var(--border-card);
   display: flex;
@@ -8,14 +14,34 @@
   flex-shrink: 0;
   height: 100%;
   justify-content: space-between;
+  overflow: hidden;
   padding: var(--sp-lg) var(--sp-md);
+  position: relative;
   width: var(--sidebar-width);
+}
+
+.sidebar-nav::before {
+  background: linear-gradient(
+    180deg,
+    var(--prism-blue) 0%,
+    var(--prism-aqua) 45%,
+    var(--prism-purple) 100%
+  );
+  content: "";
+  left: 0;
+  opacity: 0.5;
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
 }
 
 .sidebar-top,
 .sidebar-bottom {
   display: grid;
   gap: var(--sp-sm);
+  position: relative;
+  z-index: 1;
 }
 
 .sidebar-top {
@@ -31,11 +57,11 @@
 }
 
 .sidebar-brand-text {
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 1.18rem;
-  font-weight: 600;
-  letter-spacing: 0;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   line-height: 1;
 }
 
@@ -46,10 +72,10 @@
 
 .sidebar-logo {
   align-items: center;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.26);
   display: flex;
   height: var(--sidebar-logo-size);
   justify-content: center;
@@ -89,13 +115,15 @@
 
 .sidebar-item:hover {
   background: var(--bg-card-hover);
+  border-color: var(--border-input);
   color: var(--text-primary);
 }
 
 .sidebar-item.active {
   background: var(--accent-light);
-  border-color: rgba(13, 148, 136, 0.36);
-  color: var(--accent);
+  border-color: rgba(121, 174, 252, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(121, 174, 252, 0.26);
+  color: var(--text-primary);
 }
 
 .sidebar-item svg {

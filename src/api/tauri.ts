@@ -82,6 +82,8 @@ export type StatsResult = {
   by_day: DayCount[];
   recent: LogEntry[];
   unused_skills: string[];
+  reliability_mode: string;
+  reliability_note: string;
 };
 
 export type LogsQuery = {
@@ -119,6 +121,10 @@ export type ToolStatus = {
   skillsDir: string;
   rulesPath: string;
   pathSource: string;
+  skillsDirExists: boolean;
+  skillsDirWritable: boolean;
+  rulesPathExists: boolean;
+  rulesPathWritable: boolean;
   exists: boolean;
   configured: boolean;
   syncedSkills: number;
@@ -128,6 +134,27 @@ export type ToolStatus = {
   trackingEnabled: boolean;
   hookConfigured: boolean;
   isCustom: boolean;
+};
+
+export type PathCandidateAudit = {
+  skillsDir: string;
+  rulesPath: string;
+  skillsDirExists: boolean;
+  skillsDirWritable: boolean;
+  rulesPathExists: boolean;
+  rulesPathWritable: boolean;
+  selected: boolean;
+};
+
+export type BuiltInToolPathAudit = {
+  name: string;
+  id: string;
+  selectedSkillsDir: string;
+  selectedRulesPath: string;
+  pathSource: string;
+  selectedCandidateExists: boolean;
+  needsManualReview: boolean;
+  candidates: PathCandidateAudit[];
 };
 
 export type SetupApplyResult = {
@@ -180,6 +207,20 @@ export type LocalSkillsOverview = {
   matchedInMySkills: number;
   missingInMySkills: number;
   conflictWithMySkills: number;
+};
+
+export type SkillConflictVariant = {
+  sourceId: string;
+  sourceName: string;
+  contentHash: string;
+  inMySkills: boolean;
+  hashMatchesMySkills: boolean;
+  content: string;
+};
+
+export type SkillConflictDetail = {
+  skillName: string;
+  variants: SkillConflictVariant[];
 };
 
 export type OnboardingState = {
@@ -267,8 +308,26 @@ export async function setupStatus(): Promise<ToolStatus[]> {
   return invokeWithError<ToolStatus[]>("setup_status");
 }
 
+export async function setupPathValidationMatrix(): Promise<BuiltInToolPathAudit[]> {
+  return invokeWithError<BuiltInToolPathAudit[]>("setup_path_validation_matrix");
+}
+
 export async function setupLocalSkillsOverview(): Promise<LocalSkillsOverview> {
   return invokeWithError<LocalSkillsOverview>("setup_local_skills_overview");
+}
+
+export async function setupGetSkillConflictDetail(skillName: string): Promise<SkillConflictDetail> {
+  return invokeWithError<SkillConflictDetail>("setup_get_skill_conflict_detail", { skillName });
+}
+
+export async function setupResolveSkillConflict(
+  skillName: string,
+  sourceId: string,
+): Promise<SetupMutationResult> {
+  return invokeWithError<SetupMutationResult>("setup_resolve_skill_conflict", {
+    skillName,
+    sourceId,
+  });
 }
 
 export async function setupApply(

@@ -92,8 +92,8 @@
 
 .tool-card-logo {
   align-items: center;
-  background: #ffffff;
-  border: 1px solid var(--border-card);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
   border-radius: 14px;
   display: flex;
   flex-shrink: 0;
@@ -104,12 +104,12 @@
 }
 
 .tool-card-logo.is-brand {
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .tool-card-logo.is-fallback {
-  background: #f8fafc;
-  color: #334155;
+  background: var(--bg-card-hover);
+  color: var(--text-secondary);
 }
 
 .tool-card-logo-img,
@@ -198,7 +198,7 @@
 
 .tool-switch {
   align-items: center;
-  background: #d1d5db;
+  background: var(--border-input);
   border: none;
   border-radius: 999px;
   cursor: pointer;
@@ -212,11 +212,11 @@
 }
 
 .tool-switch.active {
-  background: #3b82f6;
+  background: var(--border-active);
 }
 
 .tool-switch-thumb {
-  background: #ffffff;
+  background: var(--text-primary);
   border-radius: 50%;
   display: block;
   height: 26px;

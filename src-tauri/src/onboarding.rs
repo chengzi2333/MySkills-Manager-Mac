@@ -142,6 +142,15 @@ fn copy_dir_recursive(source: &Path, target: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn is_package_source_dir(path: &Path) -> bool {
+    let normalized = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_lowercase();
+    normalized.contains("/.codex/superpowers/skills")
+        || normalized.contains("/.agents/skills")
+}
+
 pub fn apply_bootstrap_env() -> Result<(), String> {
     let home = crate::root_dir::default_home_dir();
     let config = read_config(&home)?;
@@ -259,6 +268,9 @@ pub fn onboarding_import_installed_skills_with_home(
 
         for source_dir in source_dirs {
             if !source_dir.exists() {
+                continue;
+            }
+            if is_package_source_dir(&source_dir) {
                 continue;
             }
 

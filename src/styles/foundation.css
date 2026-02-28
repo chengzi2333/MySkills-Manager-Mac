@@ -17,8 +17,9 @@ html {
 
 body {
   background:
-    radial-gradient(circle at 14% 10%, rgba(20, 184, 166, 0.1), transparent 34%),
-    radial-gradient(circle at 88% 88%, rgba(15, 118, 110, 0.1), transparent 28%),
+    radial-gradient(circle at 14% 8%, rgba(94, 127, 168, 0.2), transparent 36%),
+    radial-gradient(circle at 88% 84%, rgba(95, 153, 142, 0.17), transparent 34%),
+    radial-gradient(circle at 52% 104%, rgba(138, 115, 159, 0.12), transparent 42%),
     var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-body);
@@ -35,7 +36,7 @@ h4,
 h5,
 h6 {
   font-family: var(--font-heading);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.012em;
 }
 
 p,
@@ -53,7 +54,7 @@ textarea {
 }
 
 ::selection {
-  background: rgba(20, 184, 166, 0.22);
+  background: var(--accent-light);
 }
 
 :focus-visible {

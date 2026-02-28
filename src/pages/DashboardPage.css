@@ -1,3 +1,15 @@
 .dash-actions .filter-select {
   min-width: var(--filter-min-width-sm);
 }
+
+.dashboard-chart {
+  width: 100%;
+}
+
+.dashboard-chart--tall {
+  height: 320px;
+}
+
+.dashboard-chart--medium {
+  height: 300px;
+}

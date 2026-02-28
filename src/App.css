@@ -1,5 +1,7 @@
 .app-shell {
-  background: var(--bg-app);
+  background:
+    linear-gradient(145deg, rgba(232, 236, 242, 0.03), transparent 35%),
+    var(--bg-app);
   color: var(--text-primary);
   display: flex;
   height: 100%;
@@ -8,7 +10,7 @@
 
 .app-content {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, rgba(232, 236, 242, 0.04), rgba(0, 0, 0, 0)),
     var(--bg-app);
   border-left: 1px solid var(--border-card);
   display: flex;
@@ -20,6 +22,8 @@
 
 .app-status-bar {
   align-items: center;
+  background: rgba(36, 38, 40, 0.5);
+  backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--border-card);
   display: flex;
   flex-wrap: wrap;
@@ -29,7 +33,7 @@
 }
 
 .status-dot {
-  background: var(--accent);
+  background: var(--prism-aqua);
   border-radius: 50%;
   display: inline-block;
   height: var(--status-dot-size);

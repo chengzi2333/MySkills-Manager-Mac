@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
+use std::cmp::{Ordering, Reverse};
+use std::collections::BinaryHeap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -55,15 +56,17 @@ fn parse_log_line(line: &str) -> Option<LogEntry> {
     None
 }
 
-pub(crate) fn read_logs(root: &Path) -> Result<Vec<LogEntry>, String> {
+pub(crate) fn for_each_log(
+    root: &Path,
+    mut handler: impl FnMut(LogEntry),
+) -> Result<(), String> {
     let file_path = logs_file(root);
     if !file_path.exists() {
-        return Ok(Vec::new());
+        return Ok(());
     }
 
     let file = File::open(&file_path).map_err(|e| format!("Open log file failed: {e}"))?;
     let reader = BufReader::new(file);
-    let mut logs = Vec::new();
 
     for line in reader.lines() {
         let line = line.map_err(|e| format!("Read log line failed: {e}"))?;
@@ -71,11 +74,11 @@ pub(crate) fn read_logs(root: &Path) -> Result<Vec<LogEntry>, String> {
             continue;
         }
         if let Some(log) = parse_log_line(&line) {
-            logs.push(log);
+            handler(log);
         }
     }
 
-    Ok(logs)
+    Ok(())
 }
 
 fn compare_ts_desc(a: &LogEntry, b: &LogEntry) -> Ordering {
@@ -85,49 +88,32 @@ fn compare_ts_desc(a: &LogEntry, b: &LogEntry) -> Ordering {
     }
 }
 
+fn compare_ts_asc(a: &LogEntry, b: &LogEntry) -> Ordering {
+    compare_ts_desc(b, a)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RankedLog(LogEntry);
+
+impl Ord for RankedLog {
+    fn cmp(&self, other: &Self) -> Ordering {
+        compare_ts_asc(&self.0, &other.0)
+    }
+}
+
+impl PartialOrd for RankedLog {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 pub fn get_logs(root: &Path, query: &LogsQuery) -> Result<LogsResult, String> {
-    let mut logs = read_logs(root)?;
+    if let Ok(indexed) = crate::log_index::query_logs_index(root, query) {
+        return Ok(indexed);
+    }
+
     let from = query.from.as_deref().and_then(parse_ts);
     let to = query.to.as_deref().and_then(parse_ts);
-
-    logs.retain(|log| {
-        if let Some(skill) = query.skill.as_deref() {
-            if log.skill != skill {
-                return false;
-            }
-        }
-
-        if let Some(tool) = query.tool.as_deref() {
-            if log.tool != tool {
-                return false;
-            }
-        }
-
-        if from.is_none() && to.is_none() {
-            return true;
-        }
-
-        let Some(ts) = parse_ts(&log.ts) else {
-            return false;
-        };
-
-        if let Some(from_ts) = from {
-            if ts < from_ts {
-                return false;
-            }
-        }
-        if let Some(to_ts) = to {
-            if ts > to_ts {
-                return false;
-            }
-        }
-
-        true
-    });
-
-    logs.sort_by(compare_ts_desc);
-
-    let total = logs.len();
     let page = if query.page == 0 { 1 } else { query.page };
     let limit = if query.limit == 0 {
         100
@@ -135,7 +121,67 @@ pub fn get_logs(root: &Path, query: &LogsQuery) -> Result<LogsResult, String> {
         query.limit.min(1000)
     };
     let start = (page - 1).saturating_mul(limit);
-    let rows = logs.into_iter().skip(start).take(limit).collect::<Vec<_>>();
+    let window = start.saturating_add(limit);
+    let mut total = 0usize;
+    let mut heap = BinaryHeap::<Reverse<RankedLog>>::new();
+
+    for_each_log(root, |log| {
+        if let Some(skill) = query.skill.as_deref() {
+            if log.skill != skill {
+                return;
+            }
+        }
+
+        if let Some(tool) = query.tool.as_deref() {
+            if log.tool != tool {
+                return;
+            }
+        }
+
+        if from.is_some() || to.is_some() {
+            let Some(ts) = parse_ts(&log.ts) else {
+                return;
+            };
+
+            if let Some(from_ts) = from.as_ref() {
+                if ts < *from_ts {
+                    return;
+                }
+            }
+            if let Some(to_ts) = to.as_ref() {
+                if ts > *to_ts {
+                    return;
+                }
+            }
+        }
+
+        total += 1;
+        if window == 0 {
+            return;
+        }
+        if heap.len() < window {
+            heap.push(Reverse(RankedLog(log)));
+            return;
+        }
+
+        if let Some(oldest) = heap.peek() {
+            if compare_ts_desc(&log, &oldest.0.0) == Ordering::Less {
+                let _ = heap.pop();
+                heap.push(Reverse(RankedLog(log)));
+            }
+        }
+    })?;
+
+    let mut top_window = heap
+        .into_iter()
+        .map(|entry| entry.0.0)
+        .collect::<Vec<_>>();
+    top_window.sort_by(compare_ts_desc);
+    let rows = top_window
+        .into_iter()
+        .skip(start)
+        .take(limit)
+        .collect::<Vec<_>>();
 
     Ok(LogsResult { logs: rows, total })
 }
@@ -253,10 +299,31 @@ mod tests {
         )
         .expect("write logs");
 
-        let result = read_logs(&root).expect("read logs");
+        let mut result = Vec::<LogEntry>::new();
+        for_each_log(&root, |log| result.push(log)).expect("read logs");
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].skill, "brainstorming");
         assert_eq!(result[0].tool, "codex");
         assert_eq!(result[0].cwd, r"C:\Own Docm\Coding\My-Skills");
+    }
+
+    #[test]
+    fn get_logs_must_not_load_full_logs_vector_before_filtering() {
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let source =
+            fs::read_to_string(manifest_dir.join("src").join("logs.rs")).expect("read logs.rs");
+        let main = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("logs main section");
+
+        assert!(
+            !main.contains("let mut logs = read_logs(root)?;"),
+            "get_logs should not read all logs into a full vector before filtering"
+        );
+        assert!(
+            main.contains("crate::log_index::query_logs_index(root, query)"),
+            "get_logs should try indexed query path before fallback scanning"
+        );
     }
 }

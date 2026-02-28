@@ -1,4 +1,5 @@
 mod git;
+mod log_index;
 mod logs;
 mod onboarding;
 mod root_dir;
@@ -42,7 +43,10 @@ pub fn run() {
             git::git_commit,
             git::git_push,
             setup::setup_status,
+            setup::setup_path_validation_matrix,
             setup::setup_local_skills_overview,
+            setup::setup_get_skill_conflict_detail,
+            setup::setup_resolve_skill_conflict,
             setup::setup_apply,
             setup::setup_get_custom_tools,
             setup::setup_add_custom_tool,

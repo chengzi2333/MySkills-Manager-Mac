@@ -9,33 +9,33 @@ import "./DashboardPage.css";
 
 type Props = { skills: SkillMeta[] };
 
-const LIGHT_THEME_NAME = "myskills-light";
+const STARSHIP_THEME_NAME = "myskills-starship";
 let themesRegistered = false;
 
 function ensureEchartsThemes() {
   if (themesRegistered) return;
-  echarts.registerTheme(LIGHT_THEME_NAME, {
+  echarts.registerTheme(STARSHIP_THEME_NAME, {
     backgroundColor: "transparent",
-    color: ["#2f6bff", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"],
-    textStyle: { color: "#0f172a" },
-    title: { textStyle: { color: "#0f172a" } },
-    legend: { textStyle: { color: "#334155" } },
+    color: ["#5e7fa8", "#5f998e", "#8a739f", "#7ea36d", "#b5794a", "#c3a05e"],
+    textStyle: { color: "#e8ecf2" },
+    title: { textStyle: { color: "#e8ecf2" } },
+    legend: { textStyle: { color: "#c4ccd7" } },
     tooltip: {
-      backgroundColor: "rgba(15, 23, 42, 0.92)",
-      borderColor: "#1e293b",
-      textStyle: { color: "#e2e8f0" },
+      backgroundColor: "rgba(36, 38, 40, 0.96)",
+      borderColor: "#5a6170",
+      textStyle: { color: "#e8ecf2" },
     },
     categoryAxis: {
-      axisLine: { lineStyle: { color: "#cbd5e1" } },
-      axisTick: { lineStyle: { color: "#cbd5e1" } },
-      axisLabel: { color: "#475569" },
-      splitLine: { lineStyle: { color: "#e2e8f0" } },
+      axisLine: { lineStyle: { color: "#5a6170" } },
+      axisTick: { lineStyle: { color: "#5a6170" } },
+      axisLabel: { color: "#95a1b2" },
+      splitLine: { lineStyle: { color: "#444a52" } },
     },
     valueAxis: {
-      axisLine: { lineStyle: { color: "#cbd5e1" } },
-      axisTick: { lineStyle: { color: "#cbd5e1" } },
-      axisLabel: { color: "#475569" },
-      splitLine: { lineStyle: { color: "#e2e8f0" } },
+      axisLine: { lineStyle: { color: "#5a6170" } },
+      axisTick: { lineStyle: { color: "#5a6170" } },
+      axisLabel: { color: "#95a1b2" },
+      splitLine: { lineStyle: { color: "#444a52" } },
     },
   });
 
@@ -86,12 +86,14 @@ export default function DashboardPage({ skills }: Props) {
         <KpiCard label={t("dashboard.kpi.total")} value={skills.length} />
         <KpiCard label={t("dashboard.kpi.unused")} value={stats?.unused_skills.length ?? 0} />
       </div>
+      {stats?.reliability_note && <p className="page-count">{stats.reliability_note}</p>}
 
       <div className="chart-row">
         <article className="chart-card">
           <h3 className="chart-title">{t("dashboard.topSkills")}</h3>
           <ReactECharts
-            theme={LIGHT_THEME_NAME}
+            className="dashboard-chart dashboard-chart--tall"
+            theme={STARSHIP_THEME_NAME}
             option={{
               tooltip: { trigger: "axis" },
               xAxis: { type: "value" },
@@ -99,14 +101,14 @@ export default function DashboardPage({ skills }: Props) {
               grid: { left: 130, right: 20, top: 20, bottom: 20 },
               series: [{ type: "bar", data: topSkills.map((i) => i.count), barMaxWidth: 24 }],
             }}
-            style={{ height: 320 }}
           />
         </article>
 
         <article className="chart-card">
           <h3 className="chart-title">{t("dashboard.byTool")}</h3>
           <ReactECharts
-            theme={LIGHT_THEME_NAME}
+            className="dashboard-chart dashboard-chart--tall"
+            theme={STARSHIP_THEME_NAME}
             option={{
               tooltip: { trigger: "item" },
               series: [
@@ -117,7 +119,6 @@ export default function DashboardPage({ skills }: Props) {
                 },
               ],
             }}
-            style={{ height: 320 }}
           />
         </article>
       </div>
@@ -125,7 +126,8 @@ export default function DashboardPage({ skills }: Props) {
       <article className="chart-card">
         <h3 className="chart-title">{t("dashboard.byDay")}</h3>
         <ReactECharts
-          theme={LIGHT_THEME_NAME}
+          className="dashboard-chart dashboard-chart--medium"
+          theme={STARSHIP_THEME_NAME}
           option={{
             tooltip: { trigger: "axis" },
             xAxis: { type: "category", data: byDay.map((i) => i.date) },
@@ -133,7 +135,6 @@ export default function DashboardPage({ skills }: Props) {
             grid: { left: 50, right: 20, top: 20, bottom: 40 },
             series: [{ type: "line", data: byDay.map((i) => i.count), smooth: true }],
           }}
-          style={{ height: 300 }}
         />
       </article>
 

@@ -2,6 +2,7 @@ import type { ToolStatus } from "../../api/tauri";
 import { IconFolder } from "../../components/icons";
 import ToolLogo from "../../components/ToolLogo";
 import { formatLastSyncTime } from "../../domain/lastSyncTime";
+import { buildToolPathDiagnostics } from "../../domain/toolPathDiagnostics";
 import type { MessageKey } from "../../i18n/messages";
 import type { PathPickerTarget, ToolPathDraft } from "../toolsPathPicker";
 
@@ -69,6 +70,9 @@ export default function ToolCard({
   onSaveToolPaths,
   onRemoveCustomTool,
 }: ToolCardProps) {
+  const { skillsPathHealthy, rulesPathHealthy, skillsPathLabel, rulesPathLabel } =
+    buildToolPathDiagnostics(tool);
+
   return (
     <article key={tool.id} className={`tool-card ${installed ? "" : "tool-card-uninstalled"}`.trim()}>
       <header className="tool-card-header">
@@ -187,6 +191,12 @@ export default function ToolCard({
         <div className="tool-card-flags">
           <span className={`tool-card-badge ${tool.configured ? "ok" : "warn"}`}>
             {tool.configured ? t("tools.flag.rulesOk") : t("tools.flag.rulesMissing")}
+          </span>
+          <span className={`tool-card-badge ${skillsPathHealthy ? "ok" : "warn"}`}>
+            {skillsPathLabel}
+          </span>
+          <span className={`tool-card-badge ${rulesPathHealthy ? "ok" : "warn"}`}>
+            {rulesPathLabel}
           </span>
           {tool.id === "claude-code" && (
             <span className={`tool-card-badge ${tool.hookConfigured ? "ok" : "warn"}`}>

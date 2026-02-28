@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::*;
+use super::rule_hook_ops::{ensure_claude_hook, ensure_rules_injected};
 
 static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
@@ -22,6 +23,12 @@ fn find_tool<'a>(list: &'a [ToolStatus], id: &str) -> &'a ToolStatus {
     list.iter()
         .find(|item| item.id == id)
         .expect("find tool status")
+}
+
+fn find_path_audit<'a>(list: &'a [BuiltInToolPathAudit], id: &str) -> &'a BuiltInToolPathAudit {
+    list.iter()
+        .find(|item| item.id == id)
+        .expect("find path audit")
 }
 
 #[test]
@@ -143,6 +150,56 @@ fn setup_status_marks_builtin_override_path_source() {
 
     assert_eq!(codex.skills_dir, custom_codex_skills.to_string_lossy());
     assert_eq!(codex.path_source, "override");
+}
+
+#[test]
+fn setup_status_exposes_path_diagnostics() {
+    let home = temp_home();
+    let skills_dir = home.join("verified").join("codex-skills");
+    let rules_dir = home.join("verified");
+    let rules_file = rules_dir.join("CODERULES.md");
+    fs::create_dir_all(&skills_dir).expect("create skills dir");
+    fs::create_dir_all(&rules_dir).expect("create rules dir");
+
+    let skills_dir_str = skills_dir.to_string_lossy().to_string();
+    let rules_file_str = rules_file.to_string_lossy().to_string();
+    update_tool_paths_with_home(&home, "codex", &skills_dir_str, Some(&rules_file_str))
+        .expect("update tool paths");
+
+    let list = setup_status_with_home(&home).expect("setup status");
+    let codex = find_tool(&list, "codex");
+
+    assert!(codex.skills_dir_exists);
+    assert!(codex.skills_dir_writable);
+    assert!(!codex.rules_path_exists);
+    assert!(codex.rules_path_writable);
+}
+
+#[test]
+fn setup_path_validation_matrix_reports_candidates_and_review_flags() {
+    let home = temp_home();
+    fs::create_dir_all(home.join(".opencode").join("skills")).expect("create opencode legacy path");
+
+    let matrix = setup_path_validation_matrix_with_home(&home).expect("path validation matrix");
+    let opencode = find_path_audit(&matrix, "opencode");
+    let codex = find_path_audit(&matrix, "codex");
+
+    assert_eq!(opencode.path_source, "auto-detected");
+    assert!(opencode.selected_candidate_exists);
+    assert!(!opencode.needs_manual_review);
+    assert!(opencode
+        .candidates
+        .iter()
+        .any(|candidate| candidate.skills_dir.contains(".config")));
+    assert!(opencode
+        .candidates
+        .iter()
+        .any(|candidate| candidate.skills_dir.contains(".opencode")));
+    assert!(opencode.candidates.iter().any(|candidate| candidate.selected));
+
+    assert_eq!(codex.path_source, "default");
+    assert!(!codex.selected_candidate_exists);
+    assert!(codex.needs_manual_review);
 }
 
 #[test]
@@ -468,6 +525,126 @@ fn local_skills_overview_marks_match_conflict_and_missing_vs_my_skills() {
 }
 
 #[test]
+fn local_skills_overview_includes_codex_superpowers_skills() {
+    let home = temp_home();
+
+    fs::create_dir_all(home.join(".codex").join("skills").join("find-skills"))
+        .expect("create codex base skill");
+    fs::write(
+        home.join(".codex")
+            .join("skills")
+            .join("find-skills")
+            .join("SKILL.md"),
+        "---\nname: find-skills\n---\n",
+    )
+    .expect("write codex base skill");
+
+    fs::create_dir_all(
+        home.join(".codex")
+            .join("superpowers")
+            .join("skills")
+            .join("systematic-debugging"),
+    )
+    .expect("create codex superpowers skill");
+    fs::write(
+        home.join(".codex")
+            .join("superpowers")
+            .join("skills")
+            .join("systematic-debugging")
+            .join("SKILL.md"),
+        "---\nname: systematic-debugging\n---\n",
+    )
+    .expect("write codex superpowers skill");
+
+    let overview = local_skills_overview_with_home(&home).expect("local skills overview");
+    let codex = overview
+        .tools
+        .iter()
+        .find(|tool| tool.tool_id == "codex")
+        .expect("find codex");
+
+    assert!(
+        codex.skills.iter().any(|skill| skill.name == "find-skills"),
+        "codex overview should include base skills directory"
+    );
+    assert!(
+        codex
+            .skills
+            .iter()
+            .any(|skill| skill.name == "systematic-debugging"),
+        "codex overview should include superpowers skills directory"
+    );
+}
+
+#[test]
+fn setup_get_skill_conflict_detail_includes_my_skills_and_tool_variants() {
+    let home = temp_home();
+    let my_skill_dir = home.join("my-skills").join("ui-ux-pro-max");
+    fs::create_dir_all(&my_skill_dir).expect("create my skill dir");
+    fs::write(
+        my_skill_dir.join("SKILL.md"),
+        "---\nname: ui-ux-pro-max\nsource: my-skills\n---\n",
+    )
+    .expect("write my skill");
+
+    let codex_superpowers_skill = home
+        .join(".codex")
+        .join("superpowers")
+        .join("skills")
+        .join("ui-ux-pro-max");
+    fs::create_dir_all(&codex_superpowers_skill).expect("create codex superpowers skill dir");
+    fs::write(
+        codex_superpowers_skill.join("SKILL.md"),
+        "---\nname: ui-ux-pro-max\nsource: codex\n---\n",
+    )
+    .expect("write codex superpowers skill");
+
+    let detail =
+        setup_get_skill_conflict_detail_with_home(&home, "ui-ux-pro-max").expect("get detail");
+
+    assert_eq!(detail.skill_name, "ui-ux-pro-max");
+    assert!(detail.variants.iter().any(|variant| variant.source_id == "my-skills"));
+    let codex = detail
+        .variants
+        .iter()
+        .find(|variant| variant.source_id == "codex")
+        .expect("find codex variant");
+    assert!(!codex.hash_matches_my_skills);
+}
+
+#[test]
+fn setup_resolve_skill_conflict_writes_selected_source_into_my_skills() {
+    let home = temp_home();
+    let my_skill_dir = home.join("my-skills").join("ui-ux-pro-max");
+    fs::create_dir_all(&my_skill_dir).expect("create my skill dir");
+    fs::write(
+        my_skill_dir.join("SKILL.md"),
+        "---\nname: ui-ux-pro-max\nsource: my-skills\n---\n",
+    )
+    .expect("write my skill");
+
+    let codex_superpowers_skill = home
+        .join(".codex")
+        .join("superpowers")
+        .join("skills")
+        .join("ui-ux-pro-max");
+    fs::create_dir_all(&codex_superpowers_skill).expect("create codex superpowers skill dir");
+    fs::write(
+        codex_superpowers_skill.join("SKILL.md"),
+        "---\nname: ui-ux-pro-max\nsource: codex\n---\n",
+    )
+    .expect("write codex superpowers skill");
+
+    let result = setup_resolve_skill_conflict_with_home(&home, "ui-ux-pro-max", "codex")
+        .expect("resolve conflict");
+    assert!(result.success);
+
+    let updated =
+        fs::read_to_string(my_skill_dir.join("SKILL.md")).expect("read updated my skills content");
+    assert!(updated.contains("source: codex"));
+}
+
+#[test]
 fn setup_apply_syncs_skills_to_custom_tool() {
     let home = temp_home();
     let skills_root = temp_home();
@@ -547,12 +724,26 @@ fn setup_apply_configures_claude_hook() {
             .expect("apply setup");
     assert!(result[0].success);
 
-    let hook_script = home.join(".claude").join("hooks").join("skill-tracker.sh");
+    let hook_script = home.join(super::CLAUDE_HOOK_REL_PATH);
     assert!(hook_script.exists());
+    let hook_content = fs::read_to_string(&hook_script).expect("read hook script");
 
     let settings = fs::read_to_string(home.join(".claude").join("settings.json"))
         .expect("read claude settings");
-    assert!(settings.contains("skill-tracker.sh"));
+    #[cfg(target_family = "windows")]
+    {
+        assert!(settings.contains("powershell"));
+        assert!(settings.contains("skill-tracker.ps1"));
+        assert!(!settings.contains("skill-tracker.sh"));
+        assert!(hook_content.contains("ConvertFrom-Json"));
+        assert!(!hook_content.contains("jq -r"));
+        assert!(!hook_content.contains("#!/bin/bash"));
+    }
+    #[cfg(not(target_family = "windows"))]
+    {
+        assert!(settings.contains("skill-tracker.sh"));
+        assert!(hook_content.contains("#!/bin/bash"));
+    }
 }
 
 #[test]
@@ -704,20 +895,12 @@ fn setup_apply_removes_rules_block_when_tracking_disabled() {
 fn set_tool_tracking_disabled_removes_claude_hook() {
     let home = temp_home();
     ensure_claude_hook(&home).expect("ensure hook");
-    assert!(home
-        .join(".claude")
-        .join("hooks")
-        .join("skill-tracker.sh")
-        .exists());
+    assert!(home.join(super::CLAUDE_HOOK_REL_PATH).exists());
 
     set_tool_tracking_enabled_with_home(&home, "claude-code", false)
         .expect("disable claude tracking");
 
-    assert!(!home
-        .join(".claude")
-        .join("hooks")
-        .join("skill-tracker.sh")
-        .exists());
+    assert!(!home.join(super::CLAUDE_HOOK_REL_PATH).exists());
 }
 
 #[test]
@@ -983,6 +1166,113 @@ fn apply_engine_must_be_extracted_from_setup_module() {
     }
     assert!(setup_main.contains("apply_engine::sync_saved_skill_to_copy_tools_with_home("));
     assert!(setup_main.contains("apply_engine::apply_setup_with_paths("));
+}
+
+#[test]
+fn local_skills_overview_must_be_extracted_from_setup_module() {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let setup_source =
+        fs::read_to_string(manifest_dir.join("src").join("setup.rs")).expect("read setup.rs");
+    let setup_main = setup_source
+        .split("#[cfg(test)]")
+        .next()
+        .expect("setup main section");
+
+    for signature in [
+        "fn tool_skill_source_dirs(tool: &ToolDescriptor) -> Vec<PathBuf> {",
+        "fn skill_file_hash(skill_file: &Path) -> Result<String, String> {",
+        "fn skill_hashes_by_name(root: &Path) -> Result<HashMap<String, String>, String> {",
+        "enum NameSyncState {",
+    ] {
+        assert!(
+            !setup_main.contains(signature),
+            "local skills overview should live outside setup.rs: {signature}"
+        );
+    }
+
+    assert!(setup_main.contains("skills_overview::setup_skill_source_dirs_with_home(home)"));
+    assert!(setup_main.contains("skills_overview::local_skills_overview_with_home(home)"));
+}
+
+#[test]
+fn tool_mutations_must_be_extracted_from_setup_module() {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let setup_source =
+        fs::read_to_string(manifest_dir.join("src").join("setup.rs")).expect("read setup.rs");
+    let setup_main = setup_source
+        .split("#[cfg(test)]")
+        .next()
+        .expect("setup main section");
+
+    for signature in [
+        "fn validate_tool_id(id: &str) -> Result<String, String> {",
+        "tool.name = tool.name.trim().to_string();",
+        "if is_built_in_tool_id(&tool.id) {",
+        "let mut auto_tools = config.auto_tools.into_iter().collect::<HashSet<_>>();",
+        "if tool_id == \"claude-code\" {",
+    ] {
+        assert!(
+            !setup_main.contains(signature),
+            "tool mutation logic should live outside setup.rs: {signature}"
+        );
+    }
+
+    assert!(setup_main.contains("tool_mutations::get_custom_tools_with_home(home)"));
+    assert!(setup_main.contains("tool_mutations::add_custom_tool_with_home(home, tool)"));
+    assert!(setup_main.contains("tool_mutations::remove_custom_tool_with_home(home, id)"));
+    assert!(setup_main.contains("tool_mutations::update_tool_paths_with_home("));
+    assert!(setup_main.contains("tool_mutations::set_tool_auto_sync_with_home("));
+    assert!(setup_main.contains("tool_mutations::set_tool_tracking_enabled_with_home("));
+}
+
+#[test]
+fn status_aggregation_must_be_extracted_from_setup_module() {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let setup_source =
+        fs::read_to_string(manifest_dir.join("src").join("setup.rs")).expect("read setup.rs");
+    let setup_main = setup_source
+        .split("#[cfg(test)]")
+        .next()
+        .expect("setup main section");
+
+    for signature in [
+        "let sync_config = read_sync_config(home)?;",
+        "let (synced_skills, sync_mode, last_sync_time) = detect_sync_stats(&tool.skills_dir)?;",
+        "let hook_configured = if tool.id == \"claude-code\" {",
+    ] {
+        assert!(
+            !setup_main.contains(signature),
+            "status aggregation should live outside setup.rs: {signature}"
+        );
+    }
+
+    assert!(setup_main.contains("status_aggregation::setup_status_with_home(home)"));
+}
+
+#[test]
+fn setup_types_must_be_extracted_from_setup_module() {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let setup_source =
+        fs::read_to_string(manifest_dir.join("src").join("setup.rs")).expect("read setup.rs");
+    let setup_main = setup_source
+        .split("#[cfg(test)]")
+        .next()
+        .expect("setup main section");
+
+    for signature in [
+        "pub struct ToolStatus {",
+        "pub struct ApplyResult {",
+        "pub struct CustomTool {",
+        "pub struct SetupMutationResult {",
+        "pub struct SkillSyncConfig {",
+    ] {
+        assert!(
+            !setup_main.contains(signature),
+            "setup types should live outside setup.rs: {signature}"
+        );
+    }
+
+    assert!(setup_main.contains("pub use types::{"));
 }
 
 #[test]

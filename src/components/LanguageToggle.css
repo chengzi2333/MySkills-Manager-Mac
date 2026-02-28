@@ -1,20 +1,24 @@
 .language-toggle {
   align-items: center;
-  background: transparent;
+  background: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 700;
   justify-content: center;
-  min-width: 36px;
-  padding: var(--sp-sm);
-  transition: color var(--transition), border-color var(--transition);
+  min-height: var(--control-height-touch);
+  min-width: var(--control-height-touch);
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background var(--transition);
 }
 
 .language-toggle:hover {
+  background: var(--bg-card-hover);
   border-color: var(--accent);
   color: var(--accent);
 }

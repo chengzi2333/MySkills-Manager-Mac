@@ -1,5 +1,5 @@
 .app-shell {
-  background: var(--bg-primary);
+  background: var(--bg-app);
   color: var(--text-primary);
   display: flex;
   height: 100%;
@@ -7,6 +7,10 @@
 }
 
 .app-content {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0)),
+    var(--bg-app);
+  border-left: 1px solid var(--border-card);
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -18,31 +22,33 @@
   align-items: center;
   border-bottom: 1px solid var(--border-card);
   display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-sm);
+  min-height: var(--status-bar-height);
   padding: var(--sp-sm) var(--sp-xl);
 }
 
 .status-dot {
-  background: var(--success);
+  background: var(--accent);
   border-radius: 50%;
   display: inline-block;
-  height: 6px;
-  width: 6px;
+  height: var(--status-dot-size);
+  width: var(--status-dot-size);
 }
 
 .status-text {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 
 .app-error-toast-wrap {
   display: grid;
-  gap: 8px;
+  gap: var(--sp-sm);
   position: fixed;
-  right: 16px;
-  top: 16px;
-  width: min(420px, calc(100vw - 32px));
-  z-index: 9999;
+  right: var(--toast-edge-offset);
+  top: var(--toast-edge-offset);
+  width: min(var(--toast-max-width), calc(100vw - (var(--toast-edge-offset) * 2)));
+  z-index: var(--z-toast);
 }
 
 .app-error-toast {
@@ -51,8 +57,8 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
   color: var(--danger);
-  font-size: 13px;
-  padding: 10px 12px;
+  font-size: var(--text-sm);
+  padding: var(--sp-sm) var(--sp-md);
 }
 
 .app-fallback {
@@ -60,7 +66,7 @@
   background: var(--bg-primary);
   color: var(--text-primary);
   display: grid;
-  gap: 8px;
+  gap: var(--sp-sm);
   min-height: 100vh;
   place-content: center;
   text-align: center;
@@ -69,4 +75,10 @@
 .app-fallback h2,
 .app-fallback p {
   margin: 0;
+}
+
+@media (max-width: 900px) {
+  .app-status-bar {
+    padding: var(--sp-sm) var(--sp-lg);
+  }
 }

@@ -60,16 +60,22 @@ export default function SkillEditor({ skill, onClose, onSaved }: Props) {
 
   return (
     <div className="drawer-overlay" onClick={onClose}>
-      <aside className="drawer" onClick={(e) => e.stopPropagation()}>
+      <aside className="drawer" role="dialog" aria-modal="true" aria-label={skill.name} onClick={(e) => e.stopPropagation()}>
         <header className="drawer-header">
           <h2 className="drawer-title">{skill.name}</h2>
           <div className="drawer-actions">
             <span className="drawer-status">{status}</span>
-            <button className="btn btn-primary" onClick={handleSave} disabled={saving || !doc}>
+            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving || !doc}>
               <IconSave size={14} />
               {saving ? t("editor.saving") : t("editor.save")}
             </button>
-            <button className="btn btn-ghost" onClick={onClose} title={t("editor.close")}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={onClose}
+              aria-label={t("editor.close")}
+              title={t("editor.close")}
+            >
               <IconClose size={16} />
             </button>
           </div>

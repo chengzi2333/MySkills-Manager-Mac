@@ -115,12 +115,15 @@ export type GitPushResult = {
 export type ToolStatus = {
   name: string;
   id: string;
+  icon?: string;
   skillsDir: string;
   rulesPath: string;
   exists: boolean;
   configured: boolean;
   syncedSkills: number;
   syncMode: "symlink" | "copy" | "none" | string;
+  autoSync: boolean;
+  trackingEnabled: boolean;
   hookConfigured: boolean;
   isCustom: boolean;
 };
@@ -151,6 +154,32 @@ export type SetupMutationResult = {
   success: boolean;
 };
 
+export type SkillOverviewEntry = {
+  name: string;
+  contentHash: string;
+  duplicateAcrossTools: boolean;
+  inMySkills: boolean;
+  hashMatchesMySkills: boolean;
+  hashConflictsMySkills: boolean;
+};
+
+export type ToolSkillOverview = {
+  toolId: string;
+  toolName: string;
+  skills: SkillOverviewEntry[];
+  count: number;
+};
+
+export type LocalSkillsOverview = {
+  tools: ToolSkillOverview[];
+  duplicateNames: string[];
+  totalSkills: number;
+  uniqueSkills: number;
+  matchedInMySkills: number;
+  missingInMySkills: number;
+  conflictWithMySkills: number;
+};
+
 export type OnboardingState = {
   completed: boolean;
   skillsDir: string;
@@ -166,6 +195,23 @@ export type OnboardingCompleteResult = {
   success: boolean;
   autoSync: boolean;
   configuredTools: number;
+};
+
+export type ToolImportSummary = {
+  toolId: string;
+  toolName: string;
+  detected: number;
+  imported: number;
+  skippedExisting: number;
+  error?: string;
+};
+
+export type OnboardingImportSkillsResult = {
+  success: boolean;
+  detectedTotal: number;
+  importedTotal: number;
+  skippedExistingTotal: number;
+  tools: ToolImportSummary[];
 };
 
 export async function appPing(): Promise<string> {
@@ -219,6 +265,10 @@ export async function setupStatus(): Promise<ToolStatus[]> {
   return invokeWithError<ToolStatus[]>("setup_status");
 }
 
+export async function setupLocalSkillsOverview(): Promise<LocalSkillsOverview> {
+  return invokeWithError<LocalSkillsOverview>("setup_local_skills_overview");
+}
+
 export async function setupApply(
   tools: string[],
   skills?: SkillSyncConfig[],
@@ -244,6 +294,32 @@ export async function setupRemoveCustomTool(id: string): Promise<SetupMutationRe
   return invokeWithError<SetupMutationResult>("setup_remove_custom_tool", { id });
 }
 
+export async function setupUpdateToolPaths(
+  id: string,
+  skillsDir: string,
+  rulesFile?: string,
+): Promise<SetupMutationResult> {
+  return invokeWithError<SetupMutationResult>("setup_update_tool_paths", {
+    id,
+    skills_dir: skillsDir,
+    rules_file: rulesFile,
+  });
+}
+
+export async function setupSetToolAutoSync(
+  id: string,
+  enabled: boolean,
+): Promise<SetupMutationResult> {
+  return invokeWithError<SetupMutationResult>("setup_set_tool_auto_sync", { id, enabled });
+}
+
+export async function setupSetToolTrackingEnabled(
+  id: string,
+  enabled: boolean,
+): Promise<SetupMutationResult> {
+  return invokeWithError<SetupMutationResult>("setup_set_tool_tracking_enabled", { id, enabled });
+}
+
 export async function onboardingGetState(): Promise<OnboardingState> {
   return invokeWithError<OnboardingState>("onboarding_get_state");
 }
@@ -254,10 +330,14 @@ export async function onboardingSetSkillsDir(
 ): Promise<OnboardingSetSkillsDirResult> {
   return invokeWithError<OnboardingSetSkillsDirResult>("onboarding_set_skills_dir", {
     dir,
-    create_if_missing: createIfMissing,
+    createIfMissing,
   });
 }
 
 export async function onboardingComplete(autoSync: boolean): Promise<OnboardingCompleteResult> {
-  return invokeWithError<OnboardingCompleteResult>("onboarding_complete", { auto_sync: autoSync });
+  return invokeWithError<OnboardingCompleteResult>("onboarding_complete", { autoSync });
+}
+
+export async function onboardingImportInstalledSkills(): Promise<OnboardingImportSkillsResult> {
+  return invokeWithError<OnboardingImportSkillsResult>("onboarding_import_installed_skills");
 }

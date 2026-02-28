@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 
 import {
   onboardingComplete,
+  onboardingImportInstalledSkills,
   onboardingSetSkillsDir,
   setupStatus,
   type OnboardingCompleteResult,
@@ -30,6 +31,17 @@ export default function OnboardingWizard({
   const [tools, setTools] = useState<ToolStatus[]>([]);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+
+  function formatStatusError(error: unknown): string {
+    const raw = String(error);
+    if (raw.includes("skills dir does not exist")) {
+      return "目录不存在。请点击“选择路径”或确认创建目录。";
+    }
+    if (raw.includes("skills dir is required")) {
+      return "请先填写技能目录。";
+    }
+    return raw;
+  }
 
   useEffect(() => {
     void setupStatus()
@@ -59,7 +71,7 @@ export default function OnboardingWizard({
       setStep(2);
       setStatus("");
     } catch (e: unknown) {
-      setStatus(String(e));
+      setStatus(formatStatusError(e));
     } finally {
       setBusy(false);
     }
@@ -73,7 +85,7 @@ export default function OnboardingWizard({
       setStatus("");
       onCompleted(result);
     } catch (e: unknown) {
-      setStatus(String(e));
+      setStatus(formatStatusError(e));
       setBusy(false);
     }
   }
@@ -87,6 +99,24 @@ export default function OnboardingWizard({
     });
     if (typeof selected === "string") {
       setSkillsDir(selected);
+    }
+  }
+
+  async function handleImportInstalledSkills() {
+    setBusy(true);
+    setStatus("正在识别并导入已安装技能...");
+    try {
+      await onboardingSetSkillsDir(skillsDir, true);
+      const imported = await onboardingImportInstalledSkills();
+      const refreshed = await onboardingSetSkillsDir(skillsDir, true);
+      setSkillsCount(refreshed.skills.length);
+      setStatus(
+        `已导入 ${imported.importedTotal}/${imported.detectedTotal}，跳过已存在 ${imported.skippedExistingTotal}`,
+      );
+    } catch (e: unknown) {
+      setStatus(formatStatusError(e));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -109,10 +139,19 @@ export default function OnboardingWizard({
               placeholder="C:\\Users\\Keith\\my-skills"
             />
             <div className="onboarding-actions">
-              <button className="btn btn-ghost" onClick={() => void handlePickPath()} disabled={busy}>
+              <button type="button" className="btn btn-ghost" onClick={() => void handlePickPath()} disabled={busy}>
                 {t("onboard.path.pick")}
               </button>
               <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => void handleImportInstalledSkills()}
+                disabled={busy || skillsDir.trim().length === 0}
+              >
+                导入已安装技能
+              </button>
+              <button
+                type="button"
                 className="btn btn-primary"
                 onClick={() => void handleCheckSkillsDir()}
                 disabled={busy || skillsDir.trim().length === 0}
@@ -136,10 +175,10 @@ export default function OnboardingWizard({
               <span>{t("onboard.step2.toggle")}</span>
             </label>
             <div className="onboarding-actions">
-              <button className="btn btn-ghost" onClick={() => setStep(1)} disabled={busy}>
+              <button type="button" className="btn btn-ghost" onClick={() => setStep(1)} disabled={busy}>
                 {t("onboard.back")}
               </button>
-              <button className="btn btn-primary" onClick={() => setStep(3)} disabled={busy}>
+              <button type="button" className="btn btn-primary" onClick={() => setStep(3)} disabled={busy}>
                 {t("onboard.next")}
               </button>
             </div>
@@ -156,17 +195,21 @@ export default function OnboardingWizard({
               <li>{t("onboard.step3.syncMode")}: {autoSync ? t("onboard.step3.sync.auto") : t("onboard.step3.sync.manual")}</li>
             </ul>
             <div className="onboarding-actions">
-              <button className="btn btn-ghost" onClick={() => setStep(2)} disabled={busy}>
+              <button type="button" className="btn btn-ghost" onClick={() => setStep(2)} disabled={busy}>
                 {t("onboard.back")}
               </button>
-              <button className="btn btn-primary" onClick={() => void handleFinish()} disabled={busy}>
+              <button type="button" className="btn btn-primary" onClick={() => void handleFinish()} disabled={busy}>
                 {busy ? t("onboard.finishing") : t("onboard.finish")}
               </button>
             </div>
           </section>
         )}
 
-        {status && <p className="onboarding-status">{status}</p>}
+        {status && (
+          <p className="onboarding-status" role="status" aria-live="polite">
+            {status}
+          </p>
+        )}
       </div>
     </div>
   );

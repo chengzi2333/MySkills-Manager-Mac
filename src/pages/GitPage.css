@@ -2,7 +2,7 @@
 
 .git-actions {
   display: grid;
-  gap: 12px;
+  gap: var(--sp-sm);
 }
 
 .git-field {
@@ -11,12 +11,12 @@
 
 .git-action-buttons {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: var(--sp-sm);
 }
 
 .git-action-status {
-  margin: 0;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-sm);
+  margin: 0;
 }

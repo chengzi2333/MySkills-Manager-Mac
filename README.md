@@ -1,4 +1,4 @@
-﻿# MySkills Manager V3.1 (Tauri)
+﻿# Skillar V3.1 (Tauri)
 
 This is the active V3.1 implementation track (`Tauri 2.0 + Rust + React`).
 
@@ -56,3 +56,4 @@ C:\Users\Keith\.cargo\bin\cargo.exe tauri build --debug
 - Default skills root: `~/my-skills`
 - Override root path with `MYSKILLS_ROOT_DIR`
 - Dashboard currently bundles ECharts in main chunk; split optimization is queued
+

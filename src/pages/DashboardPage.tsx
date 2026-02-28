@@ -10,7 +10,6 @@ import "./DashboardPage.css";
 type Props = { skills: SkillMeta[] };
 
 const LIGHT_THEME_NAME = "myskills-light";
-const DARK_THEME_NAME = "myskills-dark";
 let themesRegistered = false;
 
 function ensureEchartsThemes() {
@@ -40,36 +39,7 @@ function ensureEchartsThemes() {
     },
   });
 
-  echarts.registerTheme(DARK_THEME_NAME, {
-    backgroundColor: "transparent",
-    color: ["#4f8cff", "#34d399", "#fbbf24", "#f87171", "#a78bfa", "#22d3ee"],
-    textStyle: { color: "#e8eaed" },
-    title: { textStyle: { color: "#e8eaed" } },
-    legend: { textStyle: { color: "#cbd5e1" } },
-    tooltip: {
-      backgroundColor: "rgba(15, 23, 42, 0.94)",
-      borderColor: "#334155",
-      textStyle: { color: "#e2e8f0" },
-    },
-    categoryAxis: {
-      axisLine: { lineStyle: { color: "#334155" } },
-      axisTick: { lineStyle: { color: "#334155" } },
-      axisLabel: { color: "#cbd5e1" },
-      splitLine: { lineStyle: { color: "#1e293b" } },
-    },
-    valueAxis: {
-      axisLine: { lineStyle: { color: "#334155" } },
-      axisTick: { lineStyle: { color: "#334155" } },
-      axisLabel: { color: "#cbd5e1" },
-      splitLine: { lineStyle: { color: "#1e293b" } },
-    },
-  });
-
   themesRegistered = true;
-}
-
-function getThemeName() {
-  return document.documentElement.getAttribute("data-theme") === "dark" ? DARK_THEME_NAME : LIGHT_THEME_NAME;
 }
 
 export default function DashboardPage({ skills }: Props) {
@@ -78,7 +48,6 @@ export default function DashboardPage({ skills }: Props) {
   const [days, setDays] = useState(30);
   const [stats, setStats] = useState<StatsResult | null>(null);
   const [status, setStatus] = useState("");
-  const [themeName, setThemeName] = useState(getThemeName());
 
   useEffect(() => {
     void (async () => {
@@ -92,15 +61,6 @@ export default function DashboardPage({ skills }: Props) {
       }
     })();
   }, [days, t]);
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => setThemeName(getThemeName()));
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-    return () => observer.disconnect();
-  }, []);
 
   const topSkills = stats?.by_skill.slice(0, 15) ?? [];
   const byTool = stats?.by_tool ?? [];
@@ -131,7 +91,7 @@ export default function DashboardPage({ skills }: Props) {
         <article className="chart-card">
           <h3 className="chart-title">{t("dashboard.topSkills")}</h3>
           <ReactECharts
-            theme={themeName}
+            theme={LIGHT_THEME_NAME}
             option={{
               tooltip: { trigger: "axis" },
               xAxis: { type: "value" },
@@ -146,7 +106,7 @@ export default function DashboardPage({ skills }: Props) {
         <article className="chart-card">
           <h3 className="chart-title">{t("dashboard.byTool")}</h3>
           <ReactECharts
-            theme={themeName}
+            theme={LIGHT_THEME_NAME}
             option={{
               tooltip: { trigger: "item" },
               series: [
@@ -165,7 +125,7 @@ export default function DashboardPage({ skills }: Props) {
       <article className="chart-card">
         <h3 className="chart-title">{t("dashboard.byDay")}</h3>
         <ReactECharts
-          theme={themeName}
+          theme={LIGHT_THEME_NAME}
           option={{
             tooltip: { trigger: "axis" },
             xAxis: { type: "category", data: byDay.map((i) => i.date) },

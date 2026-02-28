@@ -15,7 +15,6 @@ import { useI18n } from "./i18n/I18nProvider";
 import DashboardPage from "./pages/DashboardPage";
 import GitPage from "./pages/GitPage";
 import LogsPage from "./pages/LogsPage";
-import RulesPage from "./pages/RulesPage";
 import SkillsPage from "./pages/SkillsPage";
 import ToolsPage from "./pages/ToolsPage";
 import "./App.css";
@@ -121,8 +120,6 @@ export default function App() {
         return <LogsPage skills={skills} />;
       case "tools":
         return <ToolsPage />;
-      case "rules":
-        return <RulesPage />;
       case "git":
         return <GitPage />;
     }

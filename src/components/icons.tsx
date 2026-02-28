@@ -187,3 +187,11 @@ export function IconRefresh(p: IconProps = {}) {
 export function IconPlus(p: IconProps = {}) {
     return svgMulti(p, ["M12 5v14", "M5 12h14"]);
 }
+
+/** Folder */
+export function IconFolder(p: IconProps = {}) {
+    return svgMulti(p, [
+        "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
+        "M3 10h18",
+    ]);
+}

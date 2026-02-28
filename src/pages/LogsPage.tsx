@@ -1,12 +1,6 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import {
-  logsGet,
-  statsGet,
-  type LogsResult,
-  type SkillMeta,
-  type StatsResult,
-} from "../api/tauri";
+import { logsGet, statsGet, type LogsResult, type SkillMeta, type StatsResult } from "../api/tauri";
 import { IconChevronLeft, IconChevronRight } from "../components/icons";
 import { useI18n } from "../i18n/I18nProvider";
 import "./LogsPage.css";
@@ -41,7 +35,7 @@ export default function LogsPage({ skills }: Props) {
     void (async () => {
       setStatus(t("tools.loading"));
       try {
-        const r = await logsGet({
+        const result = await logsGet({
           skill: skill === "all" ? undefined : skill,
           tool: tool === "all" ? undefined : tool,
           from: toIsoStart(from),
@@ -49,7 +43,7 @@ export default function LogsPage({ skills }: Props) {
           page,
           limit: logsLimit,
         });
-        setData(r);
+        setData(result);
         setStatus("");
       } catch (e: unknown) {
         setStatus(String(e));

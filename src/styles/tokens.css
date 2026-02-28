@@ -1,97 +1,120 @@
 /* ===== Design Tokens ===== */
 
 :root {
-  /* --- Light Theme (default) --- */
-  --bg-primary: #f5f6fa;
-  --bg-sidebar: #ffffff;
+  /* Color system (light) */
+  --bg-primary: #e9f2f3;
+  --bg-app: #f3f8f8;
+  --bg-sidebar: #f7fbfb;
   --bg-card: #ffffff;
-  --bg-card-hover: #f0f4ff;
-  --bg-input: #f8f9fc;
-  --border-card: #e2e8f0;
-  --border-input: #cbd5e1;
-  --border-active: #7da7ff;
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
-  --accent: #2f6bff;
-  --accent-hover: #1d5ae6;
-  --accent-light: #e8f0ff;
-  --success: #10b981;
-  --success-bg: #d1fae5;
-  --warning: #f59e0b;
-  --warning-bg: #fef3c7;
-  --danger: #ef4444;
+  --bg-card-hover: #ecf6f7;
+  --bg-input: #f8fbfb;
+  --border-card: #d4e2e5;
+  --border-input: #c5d6da;
+  --border-active: #14b8a6;
+  --text-primary: #12303a;
+  --text-secondary: #476674;
+  --text-muted: #708b96;
+  --accent: #0d9488;
+  --accent-hover: #0b7f74;
+  --accent-light: #dbf3f0;
+  --accent-strong: #115e59;
+  --success: #15803d;
+  --success-bg: #dcfce7;
+  --warning: #b45309;
+  --warning-bg: #ffedd5;
+  --danger: #b91c1c;
   --danger-bg: #fee2e2;
+  --focus-ring: 0 0 0 3px rgba(13, 148, 136, 0.28);
 
-  /* --- Spacing --- */
+  /* Typography */
+  --font-body: "IBM Plex Sans", "Segoe UI", "PingFang SC", sans-serif;
+  --font-heading: "JetBrains Mono", "Cascadia Code", "SFMono-Regular", monospace;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
+  --text-xs: 0.76rem;
+  --text-sm: 0.84rem;
+  --text-md: 0.94rem;
+  --text-lg: 1rem;
+  --text-xl: clamp(1.2rem, 1rem + 0.9vw, 1.55rem);
+
+  /* Spacing scale */
+  --sp-2xs: 2px;
   --sp-xs: 4px;
   --sp-sm: 8px;
   --sp-md: 12px;
   --sp-lg: 16px;
   --sp-xl: 24px;
   --sp-2xl: 32px;
+  --sp-3xl: 40px;
 
-  /* --- Radius --- */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
 
-  /* --- Shadows --- */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --shadow-drawer: -4px 0 24px rgba(0, 0, 0, 0.1);
+  /* Shadows */
+  --shadow-card: 0 10px 24px rgba(17, 52, 64, 0.08);
+  --shadow-card-hover: 0 14px 32px rgba(17, 52, 64, 0.12);
+  --shadow-drawer: -20px 0 48px rgba(9, 24, 33, 0.22);
 
-  /* --- Sidebar --- */
-  --sidebar-width: 60px;
+  /* Layout */
+  --control-height: 40px;
+  --control-height-compact: 32px;
+  --control-height-touch: 44px;
+  --status-bar-height: 52px;
+  --status-dot-size: 8px;
+  --sidebar-width: 248px;
+  --sidebar-width-compact: 220px;
+  --sidebar-logo-size: 44px;
+  --sidebar-logo-size-compact: 44px;
+  --sidebar-item-height: 48px;
+  --sidebar-item-height-compact: 48px;
+  --toast-edge-offset: 16px;
+  --toast-max-width: 420px;
+  --badge-height: 24px;
+  --filter-min-width-sm: 130px;
+  --filter-min-width-md: 170px;
+  --capsule-option-min-width: 52px;
+  --drawer-min-width: 540px;
+  --editor-meta-textarea-min-height: 88px;
+  --editor-pane-min-height: 320px;
+  --rules-editor-min-height: 400px;
 
-  /* --- Transition --- */
+  /* Motion */
+  --transition-fast: 0.15s ease;
   --transition: 0.2s ease;
-}
+  --transition-slow: 0.28s ease;
 
-[data-theme="dark"] {
-  --bg-primary: #0f1117;
-  --bg-sidebar: #161822;
-  --bg-card: #1c1e2a;
-  --bg-card-hover: #242636;
-  --bg-input: #1e2030;
-  --border-card: #2a2d3e;
-  --border-input: #353849;
-  --border-active: #4f8cff;
-  --text-primary: #e8eaed;
-  --text-secondary: #8b8fa3;
-  --text-muted: #5a5e72;
-  --accent: #4f8cff;
-  --accent-hover: #6ba0ff;
-  --accent-light: #1e2a4a;
-  --success: #34d399;
-  --success-bg: #064e3b;
-  --warning: #fbbf24;
-  --warning-bg: #78350f;
-  --danger: #f87171;
-  --danger-bg: #7f1d1d;
-
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2);
-  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.3);
-  --shadow-drawer: -4px 0 32px rgba(0, 0, 0, 0.4);
+  /* Z-index scale */
+  --z-base: 1;
+  --z-sticky: 10;
+  --z-overlay: 30;
+  --z-drawer: 40;
+  --z-toast: 50;
 }
 
 /* ===== Animations ===== */
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-@keyframes slideOutRight {
-  from { transform: translateX(0); }
-  to { transform: translateX(100%); }
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 .animate-fadein {
-  animation: fadeIn 0.25s ease-out;
+  animation: fadeIn var(--transition-slow);
 }

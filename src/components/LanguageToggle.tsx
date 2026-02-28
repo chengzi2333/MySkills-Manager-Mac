@@ -1,10 +1,10 @@
-import { useI18n } from "../i18n/I18nProvider";
+﻿import { useI18n } from "../i18n/I18nProvider";
 import "./LanguageToggle.css";
 
 export default function LanguageToggle() {
   const { locale, setLocale, t } = useI18n();
   const next = locale === "zh-CN" ? "en-US" : "zh-CN";
-  const label = locale === "zh-CN" ? "EN" : "中";
+  const label = locale === "zh-CN" ? "EN" : "CN";
 
   return (
     <button

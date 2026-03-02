@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:desktop": "cargo tauri build && node scripts/expose-skillar-exe.mjs",
+    "build:desktop": "cargo tauri build && node scripts/expose-skillar-exe.mjs && node scripts/prepare-gitee-package.mjs",
     "expose:exe": "node scripts/expose-skillar-exe.mjs",
+    "pack:gitee": "node scripts/prepare-gitee-package.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

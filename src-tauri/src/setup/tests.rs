@@ -311,6 +311,59 @@ fn setup_apply_respects_per_tool_skill_config() {
 }
 
 #[test]
+fn setup_apply_treats_empty_skill_config_as_unconfigured() {
+    let home = temp_home();
+    let skills_root = temp_home();
+    fs::create_dir_all(home.join(".codex")).expect("create codex parent");
+    fs::create_dir_all(home.join(".myskills-manager")).expect("create app config dir");
+
+    fs::create_dir_all(skills_root.join("code-review")).expect("create code-review skill dir");
+    fs::write(
+        skills_root.join("code-review").join("SKILL.md"),
+        "---\nname: code-review\n---\n",
+    )
+    .expect("write code-review skill");
+
+    fs::create_dir_all(skills_root.join("debug-helper"))
+        .expect("create debug-helper skill dir");
+    fs::write(
+        skills_root.join("debug-helper").join("SKILL.md"),
+        "---\nname: debug-helper\n---\n",
+    )
+    .expect("write debug-helper skill");
+
+    let sync_config = serde_json::json!({
+      "syncMode": "symlink",
+      "skills": [],
+      "autoTools": [],
+      "trackingDisabledTools": []
+    });
+    fs::write(
+        home.join(".myskills-manager").join("sync-config.json"),
+        serde_json::to_string(&sync_config).expect("serialize sync config"),
+    )
+    .expect("write sync config");
+
+    let result = apply_setup_with_paths(&home, &skills_root, &["codex".to_string()], None)
+        .expect("apply setup");
+
+    assert!(result[0].success);
+    assert_eq!(result[0].synced_count, 2);
+    assert!(home
+        .join(".codex")
+        .join("skills")
+        .join("code-review")
+        .join("SKILL.md")
+        .exists());
+    assert!(home
+        .join(".codex")
+        .join("skills")
+        .join("debug-helper")
+        .join("SKILL.md")
+        .exists());
+}
+
+#[test]
 fn setup_apply_returns_error_for_unknown_tool() {
     let home = temp_home();
     let skills_root = temp_home();

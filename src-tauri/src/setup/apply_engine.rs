@@ -21,6 +21,18 @@ fn is_skill_enabled_for_tool(
     config.enabled_tools.iter().any(|enabled| enabled == tool_id)
 }
 
+fn configured_skills(
+    stored_sync_config: Option<&super::SyncConfigFile>,
+) -> Option<&[super::SkillSyncConfig]> {
+    stored_sync_config.and_then(|cfg| {
+        if cfg.skills.is_empty() {
+            None
+        } else {
+            Some(cfg.skills.as_slice())
+        }
+    })
+}
+
 fn is_tracking_enabled_for_tool(tool_id: &str, tracking_disabled_tools: &HashSet<String>) -> bool {
     !tracking_disabled_tools.contains(tool_id)
 }
@@ -32,7 +44,7 @@ pub(super) fn sync_saved_skill_to_copy_tools_with_home(
 ) -> Result<usize, String> {
     let tools = super::all_tools(home)?;
     let stored_sync_config = super::read_sync_config(home)?;
-    let config_ref = stored_sync_config.as_ref().map(|cfg| cfg.skills.as_slice());
+    let config_ref = configured_skills(stored_sync_config.as_ref());
 
     let source_file = crate::skills::list_skills(skills_root)?
         .into_iter()
@@ -86,7 +98,7 @@ pub(super) fn apply_setup_with_paths(
         super::write_sync_config(home, configs)?;
     }
     let stored_sync_config = super::read_sync_config(home)?;
-    let config_ref = stored_sync_config.as_ref().map(|cfg| cfg.skills.as_slice());
+    let config_ref = configured_skills(stored_sync_config.as_ref());
     let tracking_disabled_tools = stored_sync_config
         .as_ref()
         .map(|cfg| {

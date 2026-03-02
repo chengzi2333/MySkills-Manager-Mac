@@ -2,9 +2,9 @@
   background:
     linear-gradient(
       165deg,
-      rgba(94, 127, 168, 0.16) 0%,
-      rgba(95, 153, 142, 0.1) 34%,
-      rgba(138, 115, 159, 0.08) 72%,
+      rgba(74, 157, 255, 0.16) 0%,
+      rgba(58, 162, 173, 0.1) 34%,
+      rgba(111, 141, 232, 0.08) 72%,
       transparent 100%
     ),
     var(--bg-sidebar);
@@ -75,7 +75,7 @@
   background: var(--bg-input);
   border: 1px solid var(--border-input);
   border-radius: var(--radius-md);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.26);
+  box-shadow: 0 10px 20px rgba(35, 73, 124, 0.16);
   display: flex;
   height: var(--sidebar-logo-size);
   justify-content: center;
@@ -121,8 +121,8 @@
 
 .sidebar-item.active {
   background: var(--accent-light);
-  border-color: rgba(121, 174, 252, 0.5);
-  box-shadow: inset 0 0 0 1px rgba(121, 174, 252, 0.26);
+  border-color: rgba(47, 118, 255, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(47, 118, 255, 0.2);
   color: var(--text-primary);
 }
 

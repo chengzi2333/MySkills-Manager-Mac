@@ -15,7 +15,7 @@
 }
 
 .skill-card:hover {
-  border-color: rgba(69, 133, 136, 0.42);
+  border-color: rgba(47, 118, 255, 0.36);
   box-shadow: var(--shadow-card-hover);
   transform: translateY(-2px);
 }
@@ -115,8 +115,8 @@
 }
 
 .skill-card-tag {
-  background: rgba(69, 133, 136, 0.18);
-  border: 1px solid rgba(104, 157, 106, 0.5);
+  background: rgba(47, 118, 255, 0.12);
+  border: 1px solid rgba(47, 118, 255, 0.32);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: var(--text-sm);

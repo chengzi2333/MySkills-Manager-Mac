@@ -16,26 +16,26 @@ function ensureEchartsThemes() {
   if (themesRegistered) return;
   echarts.registerTheme(STARSHIP_THEME_NAME, {
     backgroundColor: "transparent",
-    color: ["#5e7fa8", "#5f998e", "#8a739f", "#7ea36d", "#b5794a", "#c3a05e"],
-    textStyle: { color: "#e8ecf2" },
-    title: { textStyle: { color: "#e8ecf2" } },
-    legend: { textStyle: { color: "#c4ccd7" } },
+    color: ["#2f76ff", "#4fa7c5", "#6f8de8", "#2fa67a", "#87b4ff", "#5cb7d7"],
+    textStyle: { color: "#13243a" },
+    title: { textStyle: { color: "#13243a" } },
+    legend: { textStyle: { color: "#2b425d" } },
     tooltip: {
-      backgroundColor: "rgba(36, 38, 40, 0.96)",
-      borderColor: "#5a6170",
-      textStyle: { color: "#e8ecf2" },
+      backgroundColor: "rgba(255, 255, 255, 0.97)",
+      borderColor: "#c3d5eb",
+      textStyle: { color: "#13243a" },
     },
     categoryAxis: {
-      axisLine: { lineStyle: { color: "#5a6170" } },
-      axisTick: { lineStyle: { color: "#5a6170" } },
-      axisLabel: { color: "#95a1b2" },
-      splitLine: { lineStyle: { color: "#444a52" } },
+      axisLine: { lineStyle: { color: "#c3d5eb" } },
+      axisTick: { lineStyle: { color: "#c3d5eb" } },
+      axisLabel: { color: "#5f7694" },
+      splitLine: { lineStyle: { color: "#dbe8f7" } },
     },
     valueAxis: {
-      axisLine: { lineStyle: { color: "#5a6170" } },
-      axisTick: { lineStyle: { color: "#5a6170" } },
-      axisLabel: { color: "#95a1b2" },
-      splitLine: { lineStyle: { color: "#444a52" } },
+      axisLine: { lineStyle: { color: "#c3d5eb" } },
+      axisTick: { lineStyle: { color: "#c3d5eb" } },
+      axisLabel: { color: "#5f7694" },
+      splitLine: { lineStyle: { color: "#dbe8f7" } },
     },
   });
 

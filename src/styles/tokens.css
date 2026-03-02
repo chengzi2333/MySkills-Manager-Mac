@@ -1,46 +1,46 @@
 /* ===== Design Tokens ===== */
 
 :root {
-  /* Color system (starship-neutral) */
-  --bg-primary: #242628;
-  --bg-app: #2b2e31;
-  --bg-sidebar: #31353a;
-  --bg-card: #363b40;
-  --bg-card-hover: #40464c;
-  --bg-input: #2a2e33;
-  --border-card: #4a5058;
-  --border-input: #5a6170;
-  --border-active: #5f998e;
-  --text-primary: #e8ecf2;
-  --text-secondary: #c4ccd7;
-  --text-muted: #95a1b2;
-  --accent: #79aefc;
-  --accent-hover: #8ab9ff;
-  --accent-light: rgba(121, 174, 252, 0.2);
-  --accent-strong: #5e7fa8;
-  --accent-contrast: #0f1623;
-  --success: #7ea36d;
-  --success-bg: rgba(126, 163, 109, 0.2);
-  --warning: #c3a05e;
-  --warning-bg: rgba(195, 160, 94, 0.22);
-  --danger: #c26f71;
-  --danger-bg: rgba(194, 111, 113, 0.22);
-  --focus-ring: 0 0 0 3px rgba(121, 174, 252, 0.4);
+  /* Color system (starship-bright-cool) */
+  --bg-primary: #edf4ff;
+  --bg-app: #f6f9ff;
+  --bg-sidebar: #eff4ff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f7ff;
+  --bg-input: #f7faff;
+  --border-card: #d4e3f5;
+  --border-input: #c3d5eb;
+  --border-active: #2f76ff;
+  --text-primary: #13243a;
+  --text-secondary: #2b425d;
+  --text-muted: #5f7694;
+  --accent: #2f76ff;
+  --accent-hover: #4c89ff;
+  --accent-light: rgba(47, 118, 255, 0.14);
+  --accent-strong: #1f56c9;
+  --accent-contrast: #f8fbff;
+  --success: #1f8f6a;
+  --success-bg: rgba(31, 143, 106, 0.14);
+  --warning: #b4781c;
+  --warning-bg: rgba(180, 120, 28, 0.14);
+  --danger: #c64353;
+  --danger-bg: rgba(198, 67, 83, 0.14);
+  --focus-ring: 0 0 0 3px rgba(47, 118, 255, 0.26);
 
   /* Prism accents */
-  --prism-orange: #b5794a;
-  --prism-yellow: #c3a05e;
-  --prism-aqua: #5f998e;
-  --prism-blue: #5e7fa8;
-  --prism-purple: #8a739f;
+  --prism-orange: #4a9dff;
+  --prism-yellow: #61b8ff;
+  --prism-aqua: #3aa2ad;
+  --prism-blue: #2f76ff;
+  --prism-purple: #6f8de8;
 
   /* Chart palette */
-  --chart-1: #5e7fa8;
-  --chart-2: #5f998e;
-  --chart-3: #8a739f;
-  --chart-4: #7ea36d;
-  --chart-5: #b5794a;
-  --chart-6: #c3a05e;
+  --chart-1: #2f76ff;
+  --chart-2: #4fa7c5;
+  --chart-3: #6f8de8;
+  --chart-4: #2fa67a;
+  --chart-5: #87b4ff;
+  --chart-6: #5cb7d7;
 
   /* Typography */
   --font-body: "IBM Plex Sans", "Segoe UI", "PingFang SC", sans-serif;
@@ -69,9 +69,9 @@
   --radius-pill: 999px;
 
   /* Shadows */
-  --shadow-card: 0 12px 28px rgba(0, 0, 0, 0.28);
-  --shadow-card-hover: 0 18px 36px rgba(0, 0, 0, 0.36);
-  --shadow-drawer: -20px 0 48px rgba(0, 0, 0, 0.46);
+  --shadow-card: 0 10px 24px rgba(35, 73, 124, 0.12);
+  --shadow-card-hover: 0 14px 30px rgba(35, 73, 124, 0.16);
+  --shadow-drawer: -20px 0 44px rgba(26, 58, 104, 0.18);
 
   /* Layout */
   --control-height: 40px;

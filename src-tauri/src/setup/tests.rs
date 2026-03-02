@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use super::*;
 use super::rule_hook_ops::{ensure_claude_hook, ensure_rules_injected};
+use super::*;
 
 static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
@@ -249,7 +249,10 @@ fn setup_path_validation_matrix_reports_candidates_and_review_flags() {
         .candidates
         .iter()
         .any(|candidate| candidate.skills_dir.contains(".opencode")));
-    assert!(opencode.candidates.iter().any(|candidate| candidate.selected));
+    assert!(opencode
+        .candidates
+        .iter()
+        .any(|candidate| candidate.selected));
 
     assert_eq!(codex.path_source, "default");
     assert!(!codex.selected_candidate_exists);
@@ -312,6 +315,85 @@ fn setup_apply_syncs_skills_to_codex() {
 }
 
 #[test]
+fn setup_apply_syncs_antigravity_workflow_aliases() {
+    let home = temp_home();
+    let skills_root = temp_home();
+
+    fs::create_dir_all(home.join(".gemini").join("antigravity"))
+        .expect("create antigravity parent");
+    fs::create_dir_all(skills_root.join("code-review")).expect("create skill dir");
+    fs::write(
+        skills_root.join("code-review").join("SKILL.md"),
+        "---\nname: code-review\n---\ncode review body\n",
+    )
+    .expect("write code-review skill");
+    fs::create_dir_all(skills_root.join("debug-helper")).expect("create skill dir");
+    fs::write(
+        skills_root.join("debug-helper").join("SKILL.md"),
+        "---\nname: debug-helper\n---\ndebug helper body\n",
+    )
+    .expect("write debug-helper skill");
+
+    let result = apply_setup_with_paths(&home, &skills_root, &["antigravity".to_string()], None)
+        .expect("apply setup");
+    assert_eq!(result.len(), 1);
+    assert!(result[0].success);
+    assert_eq!(result[0].synced_count, 2);
+
+    let alias_dir = home
+        .join(".gemini")
+        .join("antigravity")
+        .join("global_workflows");
+    let code_review_alias = alias_dir.join("code-review.md");
+    let debug_helper_alias = alias_dir.join("debug-helper.md");
+
+    assert!(code_review_alias.exists());
+    assert!(debug_helper_alias.exists());
+
+    let code_review_content =
+        fs::read_to_string(code_review_alias).expect("read code-review alias");
+    let debug_helper_content =
+        fs::read_to_string(debug_helper_alias).expect("read debug-helper alias");
+    assert!(code_review_content.contains("code review body"));
+    assert!(debug_helper_content.contains("debug helper body"));
+}
+
+#[test]
+fn setup_apply_updates_only_managed_antigravity_workflow_aliases() {
+    let home = temp_home();
+    let skills_root = temp_home();
+    let alias_dir = home
+        .join(".gemini")
+        .join("antigravity")
+        .join("global_workflows");
+    fs::create_dir_all(&alias_dir).expect("create alias dir");
+
+    fs::write(alias_dir.join("manual-workflow.md"), "manual content\n")
+        .expect("write manual alias");
+    fs::write(alias_dir.join("old-managed.md"), "old managed\n").expect("write old managed alias");
+    fs::write(
+        alias_dir.join(".myskills-managed-workflows.json"),
+        serde_json::to_string(&vec!["old-managed.md"]).expect("serialize manifest"),
+    )
+    .expect("write manifest");
+
+    fs::create_dir_all(skills_root.join("new-skill")).expect("create skill dir");
+    fs::write(
+        skills_root.join("new-skill").join("SKILL.md"),
+        "---\nname: new-skill\n---\nnew content\n",
+    )
+    .expect("write new skill");
+
+    let result = apply_setup_with_paths(&home, &skills_root, &["antigravity".to_string()], None)
+        .expect("apply setup");
+    assert!(result[0].success);
+
+    assert!(alias_dir.join("manual-workflow.md").exists());
+    assert!(!alias_dir.join("old-managed.md").exists());
+    assert!(alias_dir.join("new-skill.md").exists());
+}
+
+#[test]
 fn setup_apply_respects_per_tool_skill_config() {
     let home = temp_home();
     let skills_root = temp_home();
@@ -325,8 +407,7 @@ fn setup_apply_respects_per_tool_skill_config() {
     )
     .expect("write code-review skill");
 
-    fs::create_dir_all(skills_root.join("debug-helper"))
-        .expect("create debug-helper skill dir");
+    fs::create_dir_all(skills_root.join("debug-helper")).expect("create debug-helper skill dir");
     fs::write(
         skills_root.join("debug-helper").join("SKILL.md"),
         "---\nname: debug-helper\n---\n",
@@ -378,8 +459,7 @@ fn setup_apply_treats_empty_skill_config_as_unconfigured() {
     )
     .expect("write code-review skill");
 
-    fs::create_dir_all(skills_root.join("debug-helper"))
-        .expect("create debug-helper skill dir");
+    fs::create_dir_all(skills_root.join("debug-helper")).expect("create debug-helper skill dir");
     fs::write(
         skills_root.join("debug-helper").join("SKILL.md"),
         "---\nname: debug-helper\n---\n",
@@ -532,8 +612,7 @@ fn local_skills_overview_marks_match_conflict_and_missing_vs_my_skills() {
     )
     .expect("write my shared");
 
-    fs::create_dir_all(home.join("my-skills").join("aligned-skill"))
-        .expect("create my aligned");
+    fs::create_dir_all(home.join("my-skills").join("aligned-skill")).expect("create my aligned");
     fs::write(
         home.join("my-skills")
             .join("aligned-skill")
@@ -710,7 +789,10 @@ fn setup_get_skill_conflict_detail_includes_my_skills_and_tool_variants() {
         setup_get_skill_conflict_detail_with_home(&home, "ui-ux-pro-max").expect("get detail");
 
     assert_eq!(detail.skill_name, "ui-ux-pro-max");
-    assert!(detail.variants.iter().any(|variant| variant.source_id == "my-skills"));
+    assert!(detail
+        .variants
+        .iter()
+        .any(|variant| variant.source_id == "my-skills"));
     let codex = detail
         .variants
         .iter()
@@ -826,9 +908,8 @@ fn setup_apply_configures_claude_hook() {
     )
     .expect("write skill");
 
-    let result =
-        apply_setup_with_paths(&home, &skills_root, &["claude-code".to_string()], None)
-            .expect("apply setup");
+    let result = apply_setup_with_paths(&home, &skills_root, &["claude-code".to_string()], None)
+        .expect("apply setup");
     assert!(result[0].success);
 
     let hook_script = home.join(super::CLAUDE_HOOK_REL_PATH);
@@ -861,9 +942,8 @@ fn update_tool_paths_persists_override_for_builtin_tool() {
     let new_skills_str = new_skills.to_string_lossy().to_string();
     let new_rules_str = new_rules.to_string_lossy().to_string();
 
-    let result =
-        update_tool_paths_with_home(&home, "codex", &new_skills_str, Some(&new_rules_str))
-            .expect("update built-in tool paths");
+    let result = update_tool_paths_with_home(&home, "codex", &new_skills_str, Some(&new_rules_str))
+        .expect("update built-in tool paths");
     assert!(result.success);
 
     let status = setup_status_with_home(&home).expect("setup status");
@@ -897,9 +977,8 @@ fn update_tool_paths_updates_custom_tool_registry() {
     let new_rules = home.join(".aider").join("AIDER.md");
     let new_skills_str = new_skills.to_string_lossy().to_string();
     let new_rules_str = new_rules.to_string_lossy().to_string();
-    let result =
-        update_tool_paths_with_home(&home, "aider", &new_skills_str, Some(&new_rules_str))
-            .expect("update custom paths");
+    let result = update_tool_paths_with_home(&home, "aider", &new_skills_str, Some(&new_rules_str))
+        .expect("update custom paths");
     assert!(result.success);
 
     let custom_tools = get_custom_tools_with_home(&home).expect("read custom tools");
@@ -931,8 +1010,7 @@ fn setup_auto_sync_toggle_persists_in_status() {
     let codex_enabled = find_tool(&after_enable, "codex");
     assert!(codex_enabled.auto_sync);
 
-    let disable =
-        set_tool_auto_sync_with_home(&home, "codex", false).expect("disable auto sync");
+    let disable = set_tool_auto_sync_with_home(&home, "codex", false).expect("disable auto sync");
     assert!(disable.success);
 
     let after_disable = setup_status_with_home(&home).expect("setup status after disable");
@@ -1106,6 +1184,52 @@ fn sync_saved_skill_to_copy_tools_updates_existing_copy_targets() {
     let updated = fs::read_to_string(codex_skill_dir.join("SKILL.md")).expect("read updated");
     assert!(updated.contains("new content"));
     assert!(!updated.contains("old content"));
+}
+
+#[test]
+fn sync_saved_skill_to_copy_tools_updates_antigravity_workflow_alias() {
+    let home = temp_home();
+    let skills_root = temp_home();
+
+    fs::create_dir_all(skills_root.join("code-review")).expect("create skill dir");
+    fs::write(
+        skills_root.join("code-review").join("SKILL.md"),
+        "---\nname: code-review\n---\nnew content\n",
+    )
+    .expect("write source skill");
+
+    let antigravity_skill_dir = home
+        .join(".gemini")
+        .join("antigravity")
+        .join("skills")
+        .join("code-review");
+    fs::create_dir_all(&antigravity_skill_dir).expect("create antigravity skill dir");
+    fs::write(
+        antigravity_skill_dir.join("SKILL.md"),
+        "---\nname: code-review\n---\nold content\n",
+    )
+    .expect("write old copied skill");
+
+    let alias_dir = home
+        .join(".gemini")
+        .join("antigravity")
+        .join("global_workflows");
+    fs::create_dir_all(&alias_dir).expect("create alias dir");
+    fs::write(alias_dir.join("code-review.md"), "old workflow alias\n").expect("write old alias");
+    fs::write(
+        alias_dir.join(".myskills-managed-workflows.json"),
+        serde_json::to_string(&vec!["code-review.md"]).expect("serialize manifest"),
+    )
+    .expect("write manifest");
+
+    let synced = sync_saved_skill_to_copy_tools_with_home(&home, &skills_root, "code-review")
+        .expect("sync saved skill");
+
+    assert_eq!(synced, 1);
+    let updated_alias =
+        fs::read_to_string(alias_dir.join("code-review.md")).expect("read updated alias");
+    assert!(updated_alias.contains("new content"));
+    assert!(!updated_alias.contains("old workflow alias"));
 }
 
 #[test]

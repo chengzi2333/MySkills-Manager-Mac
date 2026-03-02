@@ -60,7 +60,7 @@ $entry = @{
   tool = "claude-code"
 } | ConvertTo-Json -Compress
 
-Add-Content -Path $logFile -Value $entry
+Add-Content -Path $logFile -Value $entry -Encoding UTF8
 "#;
     }
     #[cfg(not(target_family = "windows"))]
@@ -102,7 +102,7 @@ mkdir -p ~/my-skills/.logs && echo "{{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\my-skills\.logs" | Out-Null
 $ts = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $cwd = (Get-Location).Path.Replace('\', '\\')
-Add-Content "$env:USERPROFILE\my-skills\.logs\skill-usage.jsonl" "{{`"ts`":`"$ts`",`"skill`":`"<skill-name>`",`"cwd`":`"$cwd`",`"tool`":`"{tool_id}`"}}"
+Add-Content -Path "$env:USERPROFILE\my-skills\.logs\skill-usage.jsonl" -Value "{{`"ts`":`"$ts`",`"skill`":`"<skill-name>`",`"cwd`":`"$cwd`",`"tool`":`"{tool_id}`"}}" -Encoding UTF8
 ```
 {end}
 "#,

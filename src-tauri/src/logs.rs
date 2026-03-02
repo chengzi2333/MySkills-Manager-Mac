@@ -67,13 +67,25 @@ pub(crate) fn for_each_log(
 
     let file = File::open(&file_path).map_err(|e| format!("Open log file failed: {e}"))?;
     let reader = BufReader::new(file);
-
-    for line in reader.lines() {
-        let line = line.map_err(|e| format!("Read log line failed: {e}"))?;
-        if line.trim().is_empty() {
+    let mut reader = reader;
+    let mut raw_line = Vec::<u8>::new();
+    loop {
+        raw_line.clear();
+        let read = reader
+            .read_until(b'\n', &mut raw_line)
+            .map_err(|e| format!("Read log line failed: {e}"))?;
+        if read == 0 {
+            break;
+        }
+        while matches!(raw_line.last(), Some(b'\n' | b'\r')) {
+            raw_line.pop();
+        }
+        if raw_line.is_empty() {
             continue;
         }
-        if let Some(log) = parse_log_line(&line) {
+
+        let line = String::from_utf8_lossy(&raw_line);
+        if let Some(log) = parse_log_line(line.as_ref()) {
             handler(log);
         }
     }
@@ -305,6 +317,33 @@ mod tests {
         assert_eq!(result[0].skill, "brainstorming");
         assert_eq!(result[0].tool, "codex");
         assert_eq!(result[0].cwd, r"C:\Own Docm\Coding\My-Skills");
+    }
+
+    #[test]
+    fn for_each_log_tolerates_non_utf8_lines() {
+        let root = temp_root();
+        let logs_dir = root.join(".logs");
+        fs::create_dir_all(&logs_dir).expect("create logs dir");
+
+        let mut raw = Vec::<u8>::new();
+        raw.extend_from_slice(
+            br#"{"ts":"2026-03-02T04:08:09Z","skill":"using-superpowers","cwd":"C:\Own Docm\Coding\My-Skills","tool":"codex"}"#,
+        );
+        raw.push(b'\n');
+        raw.extend_from_slice(
+            br#"{"ts":"2026-03-02T04:08:09Z","skill":"writing-plans","cwd":"C:\Own Docm\Coding\bad"#,
+        );
+        raw.push(0xB7);
+        raw.extend_from_slice(br#"path","tool":"codex"}"#);
+        raw.push(b'\n');
+
+        fs::write(logs_dir.join("skill-usage.jsonl"), raw).expect("write mixed-encoding logs");
+
+        let mut result = Vec::<LogEntry>::new();
+        for_each_log(&root, |log| result.push(log)).expect("read mixed-encoding logs");
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].skill, "using-superpowers");
+        assert_eq!(result[1].skill, "writing-plans");
     }
 
     #[test]

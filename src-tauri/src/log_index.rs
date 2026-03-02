@@ -104,6 +104,7 @@ fn file_signature(path: &Path) -> (i64, i64) {
 fn import_logs(conn: &mut Connection, file_path: &Path, start_line: usize) -> Result<(), String> {
     let file = File::open(file_path).map_err(|e| format!("Open source logs for index failed: {e}"))?;
     let reader = BufReader::new(file);
+    let mut reader = reader;
     let tx = conn
         .transaction()
         .map_err(|e| format!("Start log index transaction failed: {e}"))?;
@@ -116,16 +117,28 @@ fn import_logs(conn: &mut Connection, file_path: &Path, start_line: usize) -> Re
             )
             .map_err(|e| format!("Prepare log index insert failed: {e}"))?;
 
-        for (line_idx, line) in reader.lines().enumerate() {
-            let line_no = line_idx + 1;
+        let mut line_no = 0usize;
+        let mut raw_line = Vec::<u8>::new();
+        loop {
+            raw_line.clear();
+            let read = reader
+                .read_until(b'\n', &mut raw_line)
+                .map_err(|e| format!("Read source log line failed: {e}"))?;
+            if read == 0 {
+                break;
+            }
+            line_no += 1;
             if line_no < start_line {
                 continue;
             }
-            let line = line.map_err(|e| format!("Read source log line failed: {e}"))?;
-            if line.trim().is_empty() {
+            while matches!(raw_line.last(), Some(b'\n' | b'\r')) {
+                raw_line.pop();
+            }
+            if raw_line.is_empty() {
                 continue;
             }
-            if let Some(log) = parse_log_line(&line) {
+            let line = String::from_utf8_lossy(&raw_line);
+            if let Some(log) = parse_log_line(line.as_ref()) {
                 stmt.execute(params![
                     line_no as i64,
                     log.ts,
@@ -431,5 +444,42 @@ mod tests {
         assert_eq!(second.total_invocations, 3);
         assert_eq!(second.by_skill[0].0, "code-review");
         assert_eq!(second.by_skill[0].1, 2);
+    }
+
+    #[test]
+    fn indexed_queries_tolerate_non_utf8_lines() {
+        let root = temp_root();
+        fs::create_dir_all(root.join(".logs")).expect("create logs dir");
+
+        let mut raw = Vec::<u8>::new();
+        raw.extend_from_slice(
+            br#"{"ts":"2026-03-02T04:08:09Z","skill":"using-superpowers","cwd":"C:\Own Docm\Coding\My-Skills","tool":"codex"}"#,
+        );
+        raw.push(b'\n');
+        raw.extend_from_slice(
+            br#"{"ts":"2026-03-02T04:08:09Z","skill":"writing-plans","cwd":"C:\Own Docm\Coding\bad"#,
+        );
+        raw.push(0xB7);
+        raw.extend_from_slice(br#"path","tool":"codex"}"#);
+        raw.push(b'\n');
+        fs::write(root.join(".logs").join("skill-usage.jsonl"), raw).expect("write mixed logs");
+
+        let now = Utc.with_ymd_and_hms(2026, 3, 2, 12, 0, 0).unwrap();
+        let stats = query_stats_index(&root, 30, now).expect("query indexed stats");
+        assert_eq!(stats.total_invocations, 2);
+
+        let logs = query_logs_index(
+            &root,
+            &LogsQuery {
+                skill: None,
+                tool: None,
+                from: None,
+                to: None,
+                page: 1,
+                limit: 10,
+            },
+        )
+        .expect("query indexed logs");
+        assert_eq!(logs.total, 2);
     }
 }

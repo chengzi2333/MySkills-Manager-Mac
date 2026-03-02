@@ -43,7 +43,7 @@ fn built_in_defaults(home: &Path) -> Vec<BuiltInToolDefaults> {
         BuiltInToolDefaults {
             name: "Antigravity",
             id: "antigravity",
-            skills_dir: home.join(".gemini").join("instructions"),
+            skills_dir: home.join(".gemini").join("antigravity").join("skills"),
             rules_path: Some(home.join(".gemini").join("GEMINI.md")),
         },
         BuiltInToolDefaults {
@@ -101,6 +101,12 @@ fn candidate_paths_for_tool(home: &Path, defaults: &BuiltInToolDefaults) -> Vec<
     }];
 
     match defaults.id {
+        "antigravity" => {
+            candidates.push(ToolPathCandidate {
+                skills_dir: home.join(".gemini").join("instructions"),
+                rules_path: defaults.rules_path.clone(),
+            });
+        }
         "opencode" => {
             candidates.push(ToolPathCandidate {
                 skills_dir: home.join(".opencode").join("skills"),

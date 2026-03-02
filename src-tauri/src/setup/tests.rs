@@ -138,6 +138,60 @@ fn setup_status_autodetects_opencode_legacy_path() {
 }
 
 #[test]
+fn setup_status_prefers_antigravity_skills_path_when_available() {
+    let home = temp_home();
+    let antigravity_skills = home.join(".gemini").join("antigravity").join("skills");
+    let instructions_skills = home.join(".gemini").join("instructions");
+
+    fs::create_dir_all(antigravity_skills.join("workflow")).expect("create antigravity skill dir");
+    fs::write(
+        antigravity_skills.join("workflow").join("SKILL.md"),
+        "---\nname: workflow\n---\n",
+    )
+    .expect("write antigravity skill");
+
+    fs::create_dir_all(instructions_skills.join("legacy")).expect("create legacy instruction dir");
+    fs::write(
+        instructions_skills.join("legacy").join("SKILL.md"),
+        "---\nname: legacy\n---\n",
+    )
+    .expect("write legacy instruction skill");
+
+    let list = setup_status_with_home(&home).expect("setup status");
+    let antigravity = find_tool(&list, "antigravity");
+
+    assert!(antigravity.exists);
+    assert_eq!(
+        antigravity.skills_dir,
+        antigravity_skills.to_string_lossy().to_string()
+    );
+    assert_eq!(antigravity.path_source, "default");
+}
+
+#[test]
+fn setup_status_autodetects_antigravity_instructions_fallback() {
+    let home = temp_home();
+    let instructions_skills = home.join(".gemini").join("instructions");
+
+    fs::create_dir_all(instructions_skills.join("legacy")).expect("create legacy instruction dir");
+    fs::write(
+        instructions_skills.join("legacy").join("SKILL.md"),
+        "---\nname: legacy\n---\n",
+    )
+    .expect("write legacy instruction skill");
+
+    let list = setup_status_with_home(&home).expect("setup status");
+    let antigravity = find_tool(&list, "antigravity");
+
+    assert!(antigravity.exists);
+    assert_eq!(
+        antigravity.skills_dir,
+        instructions_skills.to_string_lossy().to_string()
+    );
+    assert_eq!(antigravity.path_source, "auto-detected");
+}
+
+#[test]
 fn setup_status_marks_builtin_override_path_source() {
     let home = temp_home();
     let custom_codex_skills = home.join("custom").join("codex-skills");

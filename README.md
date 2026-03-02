@@ -89,6 +89,27 @@ Skillar 采用现代化的技术栈，以确保高性能、可靠性和跨平台
 
 > **系统要求**: Windows 10/11 (64-bit)
 
+### macOS 用户（最简构建）
+
+当前 Release 主要提供 Windows 安装包。macOS 用户可按下面步骤从源码构建：
+
+```bash
+# 1) 安装依赖
+xcode-select --install
+brew install node rustup-init
+rustup-init -y
+source "$HOME/.cargo/env"
+
+# 2) 拉取源码并构建
+git clone https://github.com/KeithChen51/MySkills-Manager.git
+cd MySkills-Manager
+npm install
+npm run build:desktop
+```
+
+构建完成后，安装包通常在：
+- `src-tauri/target/release/bundle/dmg/`
+
 ## 开发指南
 
 如果您希望从源码构建或参与开发，请按以下步骤操作。

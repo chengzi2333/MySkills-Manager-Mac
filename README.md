@@ -96,8 +96,10 @@ Skillar 采用现代化的技术栈，以确保高性能、可靠性和跨平台
 ```bash
 # 1) 安装依赖
 xcode-select --install
-brew install node rustup-init
-rustup-init -y
+# 安装 Node.js 18+（任选一种）
+# A) 官网安装器: https://nodejs.org/
+# B) Homebrew: brew install node
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 source "$HOME/.cargo/env"
 
 # 2) 拉取源码并构建
@@ -139,9 +141,15 @@ npm run build:desktop
     ```
 
 4.  **构建应用**
-    构建生产版本的应用，可执行文件将生成在 `release/` 目录下。
+    构建生产版本桌面应用，产物位于 `src-tauri/target/release/bundle/`（按平台生成 `dmg/msi/appimage` 等）。
     ```bash
     npm run build:desktop
+    ```
+
+5.  **Windows 发布打包（可选）**
+    仅在 Windows 上执行。该命令会额外生成 `release/Skillar.exe` 并准备 `../gitee-ver` 发布物料。
+    ```bash
+    npm run build:desktop:windows
     ```
 
 ### 主要 NPM 脚本
@@ -150,7 +158,8 @@ npm run build:desktop
 | :--- | :--- |
 | `npm run dev` | 启动开发模式 |
 | `npm run build` | 编译 TypeScript 和 Vite 前端 |
-| `npm run build:desktop` | 完整构建 Tauri 应用并生成可执行文件 |
+| `npm run build:desktop` | 跨平台构建 Tauri 桌面应用 |
+| `npm run build:desktop:windows` | Windows 专用发布打包（`Skillar.exe` + `gitee-ver` 物料） |
 | `npm run lint` | 运行 ESLint 代码检查 |
 
 ## 项目结构

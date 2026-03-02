@@ -34,7 +34,10 @@ export default function Sidebar({ active, onChange }: Props) {
                     <div className="sidebar-logo" aria-label="Skillar logo">
                         <img src="/skillar-icon.png" alt="Skillar" className="sidebar-logo-image" />
                     </div>
-                    <strong className="sidebar-brand-text">Skills Manager</strong>
+                    <div className="sidebar-brand-copy">
+                        <strong className="sidebar-brand-text">Skillar</strong>
+                        <span className="sidebar-brand-subtitle">MySkills Manager</span>
+                    </div>
                 </div>
                 <div className="sidebar-items">
                     {navItems.map((item) => (

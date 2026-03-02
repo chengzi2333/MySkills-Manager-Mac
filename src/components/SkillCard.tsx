@@ -42,11 +42,21 @@ export default function SkillCard({
     return Math.abs(hash) % 5;
   }, [name]);
 
+  const avatarLabel = useMemo(() => {
+    const normalized = name.trim();
+    if (!normalized) {
+      return "*";
+    }
+    const chars = Array.from(normalized);
+    const firstVisible = chars.find((char) => /[\p{L}\p{N}]/u.test(char)) ?? chars[0];
+    return /^[a-z]$/i.test(firstVisible) ? firstVisible.toUpperCase() : firstVisible;
+  }, [name]);
+
   return (
     <article className="skill-card" onClick={onEdit}>
       <div className="skill-card-main">
         <div className={`skill-card-avatar skill-card-avatar-${avatarVariant}`} aria-hidden="true">
-          <span className="skill-card-avatar-star">*</span>
+          <span className="skill-card-avatar-label">{avatarLabel}</span>
         </div>
         <div className="skill-card-copy">
           <h3 className="skill-card-name">{name}</h3>

@@ -160,10 +160,6 @@
   margin-top: var(--sp-lg);
 }
 
-.sidebar-bottom .language-toggle {
-  min-width: 100%;
-}
-
 @media (max-width: 1100px) {
   .sidebar-nav {
     width: var(--sidebar-width-compact);

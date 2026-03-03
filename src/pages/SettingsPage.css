@@ -1,0 +1,58 @@
+.settings-page {
+  gap: var(--sp-md);
+}
+
+.settings-card {
+  display: grid;
+  gap: var(--sp-sm);
+}
+
+.settings-help {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.settings-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+}
+
+.settings-path-input {
+  flex: 1 1 420px;
+  font-family: var(--font-mono);
+  min-width: 280px;
+}
+
+.settings-language-select {
+  min-width: 220px;
+}
+
+.settings-status {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-md);
+}
+
+@media (max-width: 900px) {
+  .settings-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-path-input,
+  .settings-language-select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .settings-row .btn {
+    width: 100%;
+  }
+}

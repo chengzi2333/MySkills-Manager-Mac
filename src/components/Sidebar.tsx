@@ -7,10 +7,9 @@ import {
     IconTools,
 } from "./icons";
 import { useI18n } from "../i18n/I18nProvider";
-import LanguageToggle from "./LanguageToggle";
 import "./Sidebar.css";
 
-export type ViewName = "skills" | "dashboard" | "logs" | "tools" | "git";
+export type ViewName = "skills" | "dashboard" | "logs" | "tools" | "git" | "settings";
 
 type Props = {
     active: ViewName;
@@ -56,10 +55,10 @@ export default function Sidebar({ active, onChange }: Props) {
                 </div>
             </div>
             <div className="sidebar-bottom">
-                <LanguageToggle />
                 <button
                     type="button"
-                    className="sidebar-item sidebar-item-secondary"
+                    className={`sidebar-item sidebar-item-secondary${active === "settings" ? " active" : ""}`}
+                    onClick={() => onChange("settings")}
                     aria-label={t("nav.settings")}
                     title={t("nav.settings")}
                 >

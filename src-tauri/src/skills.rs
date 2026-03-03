@@ -79,14 +79,11 @@ fn locate_skill_dir(root: &Path, name: &str) -> Result<PathBuf, String> {
     let entries = fs::read_dir(root).map_err(|e| format!("Read root dir failed: {e}"))?;
     for entry in entries {
         let entry = entry.map_err(|e| format!("Read entry failed: {e}"))?;
-        if !entry
-            .file_type()
-            .map_err(|e| format!("Read file type failed: {e}"))?
-            .is_dir()
-        {
+        let entry_path = entry.path();
+        if !entry_path.is_dir() {
             continue;
         }
-        let skill_file = entry.path().join("SKILL.md");
+        let skill_file = entry_path.join("SKILL.md");
         if !skill_file.exists() {
             continue;
         }
@@ -97,7 +94,7 @@ fn locate_skill_dir(root: &Path, name: &str) -> Result<PathBuf, String> {
         let skill_name = yaml_get_string(&frontmatter, "name")
             .unwrap_or_else(|| entry.file_name().to_string_lossy().to_string());
         if skill_name == name || entry.file_name().to_string_lossy() == name {
-            return Ok(entry.path());
+            return Ok(entry_path);
         }
     }
 
@@ -113,15 +110,12 @@ pub fn list_skills(root: &Path) -> Result<Vec<SkillMeta>, String> {
     let entries = fs::read_dir(root).map_err(|e| format!("Read root dir failed: {e}"))?;
     for entry in entries {
         let entry = entry.map_err(|e| format!("Read entry failed: {e}"))?;
-        if !entry
-            .file_type()
-            .map_err(|e| format!("Read file type failed: {e}"))?
-            .is_dir()
-        {
+        let entry_path = entry.path();
+        if !entry_path.is_dir() {
             continue;
         }
 
-        let file_path = entry.path().join("SKILL.md");
+        let file_path = entry_path.join("SKILL.md");
         if !file_path.exists() {
             continue;
         }
@@ -138,7 +132,7 @@ pub fn list_skills(root: &Path) -> Result<Vec<SkillMeta>, String> {
             tags: yaml_get_tags(&frontmatter),
             my_notes: yaml_get_string(&frontmatter, "my_notes"),
             last_updated: yaml_get_string(&frontmatter, "last_updated"),
-            directory: entry.path().to_string_lossy().to_string(),
+            directory: entry_path.to_string_lossy().to_string(),
         });
     }
 
@@ -247,6 +241,54 @@ tags:
         let skills = list_skills(&root).expect("list skills");
         assert_eq!(skills.len(), 1);
         assert_eq!(skills[0].name, "code-review");
+    }
+
+    #[test]
+    fn list_skills_includes_linked_skill_directories() {
+        let root = temp_root();
+        fs::create_dir_all(&root).expect("create root");
+
+        let external_root = temp_root();
+        let external_skill = external_root.join("linked-skill-target");
+        fs::create_dir_all(&external_skill).expect("create external skill dir");
+        fs::write(
+            external_skill.join("SKILL.md"),
+            r#"---
+name: linked-skill
+description: from link
+---
+
+# Linked Skill
+"#,
+        )
+        .expect("write linked skill");
+
+        let linked_entry = root.join("linked-skill");
+
+        #[cfg(windows)]
+        {
+            if std::os::windows::fs::symlink_dir(&external_skill, &linked_entry).is_err() {
+                let src = external_skill.to_string_lossy().replace('\'', "''");
+                let dst = linked_entry.to_string_lossy().replace('\'', "''");
+                let script = format!(
+                    "New-Item -ItemType Junction -Path '{dst}' -Target '{src}' | Out-Null"
+                );
+                let status = std::process::Command::new("powershell")
+                    .args(["-NoProfile", "-Command", &script])
+                    .status()
+                    .expect("create junction via powershell");
+                assert!(status.success(), "junction creation should succeed");
+            }
+        }
+
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&external_skill, &linked_entry).expect("create symlink");
+        }
+
+        let skills = list_skills(&root).expect("list skills");
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "linked-skill");
     }
 
     #[test]

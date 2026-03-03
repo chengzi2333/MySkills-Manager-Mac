@@ -61,7 +61,7 @@ fn built_in_defaults(home: &Path) -> Vec<BuiltInToolDefaults> {
         BuiltInToolDefaults {
             name: "Cursor",
             id: "cursor",
-            skills_dir: home.join(".cursor").join("rules"),
+            skills_dir: home.join(".cursor").join("skills"),
             rules_path: Some(
                 home.join(".cursor")
                     .join("rules")
@@ -115,7 +115,7 @@ fn candidate_paths_for_tool(home: &Path, defaults: &BuiltInToolDefaults) -> Vec<
         }
         "cursor" => {
             candidates.push(ToolPathCandidate {
-                skills_dir: home.join(".cursor").join("skills"),
+                skills_dir: home.join(".cursor").join("rules"),
                 rules_path: defaults.rules_path.clone(),
             });
         }

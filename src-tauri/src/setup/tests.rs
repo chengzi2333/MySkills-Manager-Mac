@@ -192,6 +192,40 @@ fn setup_status_autodetects_antigravity_instructions_fallback() {
 }
 
 #[test]
+fn setup_status_prefers_cursor_skills_path_when_both_rules_and_skills_exist() {
+    let home = temp_home();
+    let cursor_rules = home.join(".cursor").join("rules");
+    let cursor_skills = home.join(".cursor").join("skills");
+
+    fs::create_dir_all(cursor_rules.join("legacy-rule-as-skill"))
+        .expect("create cursor rules legacy dir");
+    fs::write(
+        cursor_rules
+            .join("legacy-rule-as-skill")
+            .join("SKILL.md"),
+        "---\nname: legacy-rule-as-skill\n---\n",
+    )
+    .expect("write legacy skill under rules");
+
+    fs::create_dir_all(cursor_skills.join("actual-skill")).expect("create cursor skills dir");
+    fs::write(
+        cursor_skills.join("actual-skill").join("SKILL.md"),
+        "---\nname: actual-skill\n---\n",
+    )
+    .expect("write actual skill under skills");
+
+    let list = setup_status_with_home(&home).expect("setup status");
+    let cursor = find_tool(&list, "cursor");
+
+    assert!(cursor.exists);
+    assert_eq!(
+        cursor.skills_dir,
+        cursor_skills.to_string_lossy().to_string()
+    );
+    assert_eq!(cursor.path_source, "default");
+}
+
+#[test]
 fn setup_status_marks_builtin_override_path_source() {
     let home = temp_home();
     let custom_codex_skills = home.join("custom").join("codex-skills");

@@ -11,6 +11,8 @@ const EXCLUDED_PREFIXES = [
   ".git",
   "node_modules",
   "dist",
+  "doc",
+  "docs",
   "release",
   "src-tauri/target",
 ];
@@ -39,16 +41,10 @@ export function shouldExcludeFromSource(relativePath) {
   );
 }
 
-export function chooseArchiveName(existingArchiveNames, packageVersion, overrideName = "") {
+export function chooseArchiveName(packageVersion, overrideName = "") {
   const override = (overrideName ?? "").trim();
   if (override) {
     return override;
-  }
-  if (existingArchiveNames.length > 0) {
-    const stableName = existingArchiveNames
-      .slice()
-      .sort((left, right) => left.localeCompare(right))[0];
-    return stableName;
   }
   return `MySkills-Manager-v${packageVersion}-source.zip`;
 }
@@ -152,8 +148,7 @@ export async function prepareGiteePackage(options = {}) {
 
   await mkdir(giteeDir, { recursive: true });
   const packageVersion = await readPackageVersion(projectRoot);
-  const existingArchiveNames = await findExistingArchives(giteeDir);
-  const archiveName = chooseArchiveName(existingArchiveNames, packageVersion, archiveNameOverride);
+  const archiveName = chooseArchiveName(packageVersion, archiveNameOverride);
 
   const targetExe = path.join(giteeDir, "Skillar.exe");
   await copyFile(sourceExe, targetExe);

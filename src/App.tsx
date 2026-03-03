@@ -16,6 +16,7 @@ import DashboardPage from "./pages/DashboardPage";
 import GitPage from "./pages/GitPage";
 import LogsPage from "./pages/LogsPage";
 import SkillsPage from "./pages/SkillsPage";
+import SettingsPage from "./pages/SettingsPage";
 import ToolsPage from "./pages/ToolsPage";
 import "./App.css";
 
@@ -122,6 +123,8 @@ export default function App() {
         return <ToolsPage />;
       case "git":
         return <GitPage />;
+      case "settings":
+        return <SettingsPage onSkillsDirChanged={loadSkills} />;
     }
   }
 

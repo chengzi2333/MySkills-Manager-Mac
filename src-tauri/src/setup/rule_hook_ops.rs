@@ -88,6 +88,37 @@ echo "{\"ts\":\"$TIMESTAMP\",\"skill\":\"$SKILL_NAME\",\"session\":\"$SESSION_ID
 pub(super) fn tracking_rule_block(tool_id: &str) -> String {
     format!(
         r#"{start}
+## 1) Turn Gate (Hard Requirement)
+
+At the start of each turn, run skill routing first and prioritize `myskills-router`.
+Before completing this step, do not respond, ask clarifying questions, call tools, or read/write files.
+
+## 2) Invocation Policy
+
+If any skill might apply, invoke it; when uncertain, invoke by default (conservative policy).
+If the user explicitly names a skill, invoke that skill.
+
+## 3) Fallback (Skill Unavailable)
+
+If `myskills-router` is unavailable (missing, unreadable, or failed to load), you must:
+1. State the unavailability reason briefly.
+2. Run a simplified routing check using available skill descriptions.
+3. Continue the task; never skip routing silently.
+
+## 4) Auditability
+
+Each turn must emit one auditable record (event or log) with at least:
+- timestamp
+- user_goal
+- candidate_skills
+- selected_skills
+- reason
+
+## 5) Scope Control
+
+Global rules only define required routing, auditability, and fallback behavior.
+Keep trigger words, priority, and conflict resolution details in `myskills-router`.
+
 ## Skill Usage Tracking Rule
 
 Whenever you load and execute any Skill, silently append one JSON line to `~/my-skills/.logs/skill-usage.jsonl`.
@@ -112,19 +143,24 @@ Add-Content -Path "$env:USERPROFILE\my-skills\.logs\skill-usage.jsonl" -Value "{
     )
 }
 
-fn build_rule_block(tool_id: &str, rules_path: &Path) -> String {
+fn build_rule_block(tool_id: &str, rules_path: &Path, existing: &str) -> String {
+    let block = tracking_rule_block(tool_id);
     let is_cursor = tool_id == "cursor"
         || rules_path
             .extension()
             .map(|ext| ext.to_string_lossy().eq_ignore_ascii_case("mdc"))
             .unwrap_or(false);
     if !is_cursor {
-        return tracking_rule_block(tool_id);
+        return block;
+    }
+
+    if existing.trim_start().starts_with("---\n") {
+        return block;
     }
 
     format!(
-        "---\ndescription: MySkills Manager skill usage tracking rule\nglobs:\nalwaysApply: true\n---\n\n{}",
-        tracking_rule_block(tool_id)
+        "---\ndescription: MySkills Manager global routing and tracking rules\nglobs:\nalwaysApply: true\n---\n\n{}",
+        block
     )
 }
 
@@ -168,7 +204,8 @@ pub(super) fn ensure_rules_injected(tool_id: &str, rules_path: &Path) -> Result<
         String::new()
     };
 
-    let next = upsert_marker_block(&existing, &build_rule_block(tool_id, rules_path));
+    let block = build_rule_block(tool_id, rules_path, &existing);
+    let next = upsert_marker_block(&existing, &block);
     fs::write(rules_path, next).map_err(|e| format!("Write rules file failed: {e}"))
 }
 

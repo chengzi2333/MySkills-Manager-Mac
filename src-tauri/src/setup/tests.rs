@@ -929,6 +929,41 @@ fn setup_apply_injects_rules_once_for_codex() {
     let marker_count = rules_content.matches("[MySkills Manager]").count();
     assert_eq!(marker_count, 1);
     assert!(rules_content.contains("codex"));
+    assert!(rules_content.contains("## 1) Turn Gate (Hard Requirement)"));
+    assert!(rules_content.contains("`myskills-router`"));
+}
+
+#[test]
+fn setup_apply_cursor_rules_do_not_duplicate_frontmatter() {
+    let home = temp_home();
+    let skills_root = temp_home();
+    fs::create_dir_all(skills_root.join("code-review")).expect("create skill dir");
+    fs::write(
+        skills_root.join("code-review").join("SKILL.md"),
+        "---\nname: code-review\n---\n",
+    )
+    .expect("write skill");
+
+    let first = apply_setup_with_paths(&home, &skills_root, &["cursor".to_string()], None)
+        .expect("apply setup");
+    assert!(first[0].success);
+
+    let second = apply_setup_with_paths(&home, &skills_root, &["cursor".to_string()], None)
+        .expect("apply setup");
+    assert!(second[0].success);
+
+    let rules_path = home
+        .join(".cursor")
+        .join("rules")
+        .join("myskills-tracker.mdc");
+    let rules_content = fs::read_to_string(rules_path).expect("read cursor rules");
+    let marker_count = rules_content.matches("[MySkills Manager]").count();
+    assert_eq!(marker_count, 1);
+    let frontmatter_count = rules_content
+        .matches("description: MySkills Manager global routing and tracking rules")
+        .count();
+    assert_eq!(frontmatter_count, 1);
+    assert!(rules_content.contains("## 1) Turn Gate (Hard Requirement)"));
 }
 
 #[test]

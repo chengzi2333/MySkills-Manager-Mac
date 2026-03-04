@@ -4,9 +4,8 @@
 
 <h1 align="center">Skillar (MySkills Manager) Mac Edition</h1>
 
-<p align="center">
-  面向 AI Skills 的本地桌面管理器：统一收敛、跨工具同步、使用追踪与冲突治理。<br>
-  <em>(本项目 Fork 自 <a href="https://github.com/KeithChen51/MySkills-Manager">KeithChen51/MySkills-Manager</a> 的 Mac 专属移植与增强版本)</em>
+面向 AI Skills 的本地桌面管理器：统一收敛、跨工具同步、使用追踪与冲突治理。<br>
+  <em>(本项目 Fork 自 <a href="https://github.com/KeithChen51/MySkills-Manager">KeithChen51/MySkills-Manager</a> 的 Mac 专属移植与增强版本，**目前仅支持 Apple Silicon (M1/M2/M3 等 M 系列芯片) Mac**)</em>
 </p>
 
 <p align="center">
@@ -100,6 +99,8 @@ Skillar 的产品设计遵循三条原则：
 - 请前往本仓库的 [GitHub Releases](../../releases/latest) 页面。
 - 下载最新的 `Skillar.dmg` 并在 Mac 上安装。
 
+> **⚠️ 注意：当前 Release 编译的安装包为 `aarch64` 架构，仅支持搭载 Apple Silicon（M1/M2/M3 等 M 系列芯片）的 Mac 电脑使用。**
+> 如果你是 Intel 芯片的 Mac 用户，请参考下方“从源码运行”或自行构建。
 > 如果你想下载原版 Windows 客户端，请前往原项目开源地址：[KeithChen51/MySkills-Manager](https://github.com/KeithChen51/MySkills-Manager)
 
 ### 2) 从源码运行（开发/试用）

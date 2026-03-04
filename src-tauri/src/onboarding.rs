@@ -3,6 +3,10 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+const MYSKILLS_COMMAND_SKILL_NAME: &str = "myskills-command";
+const MYSKILLS_COMMAND_SKILL_MD: &str =
+    include_str!("../../builtin-skills/myskills-command/SKILL.md");
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 struct AppConfig {
@@ -83,6 +87,22 @@ fn ensure_dir_exists(path: &Path) -> Result<(), String> {
     fs::create_dir_all(path).map_err(|e| format!("create directory failed: {e}"))
 }
 
+fn ensure_builtin_skill_seeded(skills_root: &Path) -> Result<(), String> {
+    let skill_dir = skills_root.join(MYSKILLS_COMMAND_SKILL_NAME);
+    let skill_file = skill_dir.join("SKILL.md");
+    fs::create_dir_all(&skill_dir).map_err(|e| format!("create builtin skill dir failed: {e}"))?;
+    let should_write = match fs::read_to_string(&skill_file) {
+        Ok(existing) => existing != MYSKILLS_COMMAND_SKILL_MD,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => true,
+        Err(err) => return Err(format!("read builtin skill failed: {err}")),
+    };
+    if should_write {
+        fs::write(&skill_file, MYSKILLS_COMMAND_SKILL_MD)
+            .map_err(|e| format!("write builtin skill failed: {e}"))?;
+    }
+    Ok(())
+}
+
 fn read_config(home: &Path) -> Result<AppConfig, String> {
     let path = config_file(home);
     if !path.exists() {
@@ -155,6 +175,9 @@ pub fn apply_bootstrap_env() -> Result<(), String> {
     let home = crate::root_dir::default_home_dir();
     let config = read_config(&home)?;
     if !config.skills_dir.trim().is_empty() {
+        let skills_root = PathBuf::from(&config.skills_dir);
+        ensure_dir_exists(&skills_root)?;
+        ensure_builtin_skill_seeded(&skills_root)?;
         unsafe {
             std::env::set_var("MYSKILLS_ROOT_DIR", config.skills_dir);
         }
@@ -189,6 +212,7 @@ pub fn onboarding_set_skills_dir_with_home(
             return Err("skills dir does not exist".to_string());
         }
     }
+    ensure_builtin_skill_seeded(&path)?;
 
     let mut config = read_config(home)?;
     config.skills_dir = path.to_string_lossy().to_string();
@@ -386,6 +410,17 @@ mod tests {
         ENV_LOCK.lock().unwrap_or_else(|err| err.into_inner())
     }
 
+    fn restore_env_var(key: &str, value: Option<String>) {
+        match value {
+            Some(v) => unsafe {
+                std::env::set_var(key, v);
+            },
+            None => unsafe {
+                std::env::remove_var(key);
+            },
+        }
+    }
+
     fn temp_home() -> PathBuf {
         let mut root = std::env::temp_dir();
         let ts = SystemTime::now()
@@ -424,8 +459,12 @@ mod tests {
             onboarding_set_skills_dir_with_home(&home, &skills_root.to_string_lossy(), false)
                 .expect("set skills dir");
         assert!(result.success);
-        assert_eq!(result.skills.len(), 1);
-        assert_eq!(result.skills[0].name, "code-review");
+        assert_eq!(result.skills.len(), 2);
+        assert!(result.skills.iter().any(|skill| skill.name == "code-review"));
+        assert!(result
+            .skills
+            .iter()
+            .any(|skill| skill.name == "myskills-command"));
 
         let state = onboarding_get_state_with_home(&home).expect("get state");
         assert_eq!(PathBuf::from(state.skills_dir), skills_root);
@@ -479,7 +518,92 @@ mod tests {
                 .expect("set skills dir");
         assert!(result.success);
         assert!(skills_root.exists());
-        assert_eq!(result.skills.len(), 0);
+        assert_eq!(result.skills.len(), 1);
+        assert_eq!(result.skills[0].name, "myskills-command");
+    }
+
+    #[test]
+    fn onboarding_set_skills_dir_seeds_myskills_command_skill() {
+        let _guard = lock_env();
+        let home = temp_home();
+        let skills_root = home.join("empty-skills-root");
+        fs::create_dir_all(&skills_root).expect("create empty skills root");
+
+        let result =
+            onboarding_set_skills_dir_with_home(&home, &skills_root.to_string_lossy(), false)
+                .expect("set skills dir");
+        assert!(result.success);
+
+        let skill_file = skills_root.join("myskills-command").join("SKILL.md");
+        assert!(skill_file.exists(), "myskills-command skill should be generated");
+
+        let raw = fs::read_to_string(&skill_file).expect("read generated skill");
+        assert!(raw.contains("name: myskills-command"));
+    }
+
+    #[test]
+    fn onboarding_set_skills_dir_refreshes_builtin_skill_when_outdated() {
+        let _guard = lock_env();
+        let home = temp_home();
+        let skills_root = home.join("existing-skills-root");
+        let builtin_skill_file = skills_root.join("myskills-command").join("SKILL.md");
+        fs::create_dir_all(
+            builtin_skill_file
+                .parent()
+                .expect("myskills-command parent directory"),
+        )
+        .expect("create builtin skill directory");
+        fs::write(&builtin_skill_file, "---\nname: myskills-command\n---\n# old\n")
+            .expect("write outdated builtin skill");
+
+        let result =
+            onboarding_set_skills_dir_with_home(&home, &skills_root.to_string_lossy(), false)
+                .expect("set skills dir");
+        assert!(result.success);
+
+        let raw = fs::read_to_string(&builtin_skill_file).expect("read refreshed skill");
+        assert_eq!(raw, MYSKILLS_COMMAND_SKILL_MD);
+    }
+
+    #[test]
+    fn apply_bootstrap_env_seeds_builtin_skill_for_existing_config() {
+        let _guard = lock_env();
+        let home = temp_home();
+        let skills_root = home.join("legacy-skills");
+        fs::create_dir_all(&skills_root).expect("create skills root");
+
+        let config = AppConfig {
+            onboarding_completed: true,
+            skills_dir: skills_root.to_string_lossy().to_string(),
+            auto_sync: false,
+        };
+        write_config(&home, &config).expect("write onboarding config");
+
+        let old_home = std::env::var("HOME").ok();
+        let old_userprofile = std::env::var("USERPROFILE").ok();
+        let old_root = std::env::var("MYSKILLS_ROOT_DIR").ok();
+
+        unsafe {
+            std::env::set_var("HOME", home.to_string_lossy().to_string());
+            std::env::remove_var("USERPROFILE");
+            std::env::remove_var("MYSKILLS_ROOT_DIR");
+        }
+
+        apply_bootstrap_env().expect("bootstrap env");
+
+        let skill_file = skills_root.join("myskills-command").join("SKILL.md");
+        assert!(
+            skill_file.exists(),
+            "bootstrap should seed myskills-command for existing config"
+        );
+        assert_eq!(
+            std::env::var("MYSKILLS_ROOT_DIR").expect("MYSKILLS_ROOT_DIR should be set"),
+            skills_root.to_string_lossy()
+        );
+
+        restore_env_var("HOME", old_home);
+        restore_env_var("USERPROFILE", old_userprofile);
+        restore_env_var("MYSKILLS_ROOT_DIR", old_root);
     }
 
     #[test]
@@ -578,4 +702,5 @@ mod tests {
         assert_eq!(result.imported_total, 0);
         assert_eq!(result.skipped_existing_total, 0);
     }
+
 }

@@ -2,10 +2,11 @@
   <img src="./public/skillar-dark-v1-white-bg.png" alt="Skillar Logo" width="220">
 </p>
 
-<h1 align="center">Skillar (MySkills Manager)</h1>
+<h1 align="center">Skillar (MySkills Manager) Mac Edition</h1>
 
 <p align="center">
-  面向 AI Skills 的本地桌面管理器：统一收敛、跨工具同步、使用追踪与冲突治理。
+  面向 AI Skills 的本地桌面管理器：统一收敛、跨工具同步、使用追踪与冲突治理。<br>
+  <em>(本项目 Fork 自 <a href="https://github.com/KeithChen51/MySkills-Manager">KeithChen51/MySkills-Manager</a> 的 Mac 专属移植与增强版本)</em>
 </p>
 
 <p align="center">
@@ -32,7 +33,7 @@ Skillar 的产品设计遵循三条原则：
 这三条原则对应到下方的核心能力：统一管理与同步、数据看板与日志、冲突治理与可控配置。
 ## 核心能力
 
-当前 README 内容已按仓库现状（`myskills-manager`）对齐。
+当前 README 内容已按独立仓库现状（`MySkills-Manager-Mac`）对齐。
 
 ### 1. Skills 管理与编辑
 
@@ -78,7 +79,7 @@ Skillar 的产品设计遵循三条原则：
 
 ## 内置工具支持
 
-> 路径中的 `~` 表示用户主目录（Windows 通常为 `%USERPROFILE%`）。
+> 路径中的 `~` 表示用户主目录（Mac/Linux：`/Users/username` 或 `/home/username`）。
 
 | Tool | ID | 默认 Skills 目录 | 默认 Rules 文件 |
 | :--- | :--- | :--- | :--- |
@@ -96,25 +97,27 @@ Skillar 的产品设计遵循三条原则：
 
 ### 1) 直接下载（推荐）
 
-- GitHub Releases: `https://github.com/KeithChen51/MySkills-Manager/releases/latest`
-- 主要面向 Windows，下载后可直接使用 `Skillar.exe`（以发布页实际文件名为准）。
+- 请前往本仓库的 [GitHub Releases](../../releases/latest) 页面。
+- 下载最新的 `Skillar.dmg` 并在 Mac 上安装。
+
+> 如果你想下载原版 Windows 客户端，请前往原项目开源地址：[KeithChen51/MySkills-Manager](https://github.com/KeithChen51/MySkills-Manager)
 
 ### 2) 从源码运行（开发/试用）
 
 ```bash
-git clone https://github.com/KeithChen51/MySkills-Manager.git
-cd MySkills-Manager/myskills-manager
+git clone https://github.com/chengzi2333/MySkills-Manager-Mac.git
+cd MySkills-Manager-Mac
 npm install
 cargo tauri dev
 ```
 
-### 3) 本地构建可执行文件（Windows）
+### 3) 本地构建可执行文件（Mac DMG）
 
 ```bash
-npm run build:desktop:windows
+npm run build:desktop:mac
 ```
 
-构建后可在 `release/Skillar.exe` 获取分发文件。
+构建后可在项目根目录的 `release/Skillar.dmg` 找到安装包。
 
 ## 快速开始
 
@@ -127,8 +130,8 @@ npm run build:desktop:windows
 ### 安装依赖
 
 ```bash
-git clone https://github.com/KeithChen51/MySkills-Manager.git
-cd MySkills-Manager/myskills-manager
+git clone https://github.com/chengzi2333/MySkills-Manager-Mac.git
+cd MySkills-Manager-Mac
 npm install
 ```
 
@@ -146,16 +149,12 @@ cargo tauri dev
 npm run dev
 ```
 
-### 构建
+### 构建 Mac 安装包 (DMG)
+
+执行以下命令进行编译打包，生成的 `.dmg` 文件会自动提取到 `release/` 目录下：
 
 ```bash
-npm run build:desktop
-```
-
-Windows 发布打包（生成 `release/Skillar.exe` 并准备发布物料）：
-
-```bash
-npm run build:desktop:windows
+npm run build:desktop:mac
 ```
 
 ## 开发与测试
@@ -167,9 +166,8 @@ npm run build:desktop:windows
 | `npm run dev` | 启动 Vite 前端开发服务 |
 | `npm run build` | 构建前端（TypeScript + Vite） |
 | `npm run build:desktop` | 构建 Tauri 桌面应用 |
-| `npm run build:desktop:windows` | Windows 一键发布打包（含 gitee 物料） |
-| `npm run expose:exe` | 将 `app.exe` 暴露为 `release/Skillar.exe` |
-| `npm run pack:gitee` | 生成 gitee 发布包（源码 zip + exe） |
+| `npm run build:desktop:mac` | Mac 分发打包（提取生成 `release/Skillar.dmg`） |
+| `npm run expose:mac` | 手动将 dmg 文件提取到 `release/` 目录 |
 | `npm run lint` | ESLint 检查 |
 
 ### 测试命令
@@ -185,7 +183,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 ## 项目结构
 
 ```text
-myskills-manager/
+MySkills-Manager-Mac/
 ├── src/                     # React + TypeScript 前端
 │   ├── api/                 # Tauri invoke API 封装
 │   ├── components/          # 组件（SkillEditor、Sidebar 等）
@@ -223,9 +221,8 @@ myskills-manager/
 ## 发布说明
 
 - 桌面构建产物位于 `src-tauri/target/release/bundle/`。
-- Windows 分发可执行文件默认为 `release/Skillar.exe`。
-- 若使用 `pack:gitee`，会输出 exe 与源码压缩包。
+- Mac 的 `.dmg` 安装包及其它可分发文件可通过 `npm run build:desktop:mac` 提取到 `release/` 目录下。
 
 ---
 
-<p align="center">Built by Keith Lim</p>
+<p align="center">Ported to macOS by chengzi2333 | Original by Keith Lim</p>

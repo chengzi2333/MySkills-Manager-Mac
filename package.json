@@ -1,14 +1,16 @@
 {
   "name": "myskills-manager",
   "private": true,
-  "version": "0.1.5",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npx tsc -b && vite build",
     "build:desktop": "cargo tauri build",
     "build:desktop:windows": "npm run build:desktop && node scripts/expose-skillar-exe.mjs && node scripts/prepare-gitee-package.mjs",
+    "build:desktop:mac": "npm run build:desktop && node scripts/expose-skillar-mac.mjs",
     "expose:exe": "node scripts/expose-skillar-exe.mjs",
+    "expose:mac": "node scripts/expose-skillar-mac.mjs",
     "pack:gitee": "node scripts/prepare-gitee-package.mjs",
     "lint": "eslint .",
     "preview": "vite preview"

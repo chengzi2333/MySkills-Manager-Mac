@@ -1,11 +1,12 @@
-use serde::{Deserialize, Serialize};
+﻿use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const MYSKILLS_COMMAND_SKILL_NAME: &str = "myskills-command";
-const MYSKILLS_COMMAND_SKILL_MD: &str =
-    include_str!("../../builtin-skills/myskills-command/SKILL.md");
+const MYSKILLS_ROUTER_SKILL_NAME: &str = "myskills-router";
+const LEGACY_MYSKILLS_COMMAND_SKILL_NAME: &str = "myskills-command";
+const MYSKILLS_ROUTER_SKILL_MD: &str =
+    include_str!("../../builtin-skills/myskills-router/SKILL.md");
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -87,17 +88,35 @@ fn ensure_dir_exists(path: &Path) -> Result<(), String> {
     fs::create_dir_all(path).map_err(|e| format!("create directory failed: {e}"))
 }
 
+fn migrate_legacy_builtin_skill_name(skills_root: &Path) -> Result<(), String> {
+    let legacy_dir = skills_root.join(LEGACY_MYSKILLS_COMMAND_SKILL_NAME);
+    let legacy_skill_file = legacy_dir.join("SKILL.md");
+    if !legacy_skill_file.exists() {
+        return Ok(());
+    }
+
+    let router_dir = skills_root.join(MYSKILLS_ROUTER_SKILL_NAME);
+    if router_dir.exists() {
+        return Ok(());
+    }
+
+    fs::rename(&legacy_dir, &router_dir)
+        .map_err(|e| format!("migrate legacy builtin skill failed: {e}"))
+}
+
 fn ensure_builtin_skill_seeded(skills_root: &Path) -> Result<(), String> {
-    let skill_dir = skills_root.join(MYSKILLS_COMMAND_SKILL_NAME);
+    migrate_legacy_builtin_skill_name(skills_root)?;
+
+    let skill_dir = skills_root.join(MYSKILLS_ROUTER_SKILL_NAME);
     let skill_file = skill_dir.join("SKILL.md");
     fs::create_dir_all(&skill_dir).map_err(|e| format!("create builtin skill dir failed: {e}"))?;
     let should_write = match fs::read_to_string(&skill_file) {
-        Ok(existing) => existing != MYSKILLS_COMMAND_SKILL_MD,
+        Ok(existing) => existing != MYSKILLS_ROUTER_SKILL_MD,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => true,
         Err(err) => return Err(format!("read builtin skill failed: {err}")),
     };
     if should_write {
-        fs::write(&skill_file, MYSKILLS_COMMAND_SKILL_MD)
+        fs::write(&skill_file, MYSKILLS_ROUTER_SKILL_MD)
             .map_err(|e| format!("write builtin skill failed: {e}"))?;
     }
     Ok(())
@@ -464,7 +483,7 @@ mod tests {
         assert!(result
             .skills
             .iter()
-            .any(|skill| skill.name == "myskills-command"));
+            .any(|skill| skill.name == "myskills-router"));
 
         let state = onboarding_get_state_with_home(&home).expect("get state");
         assert_eq!(PathBuf::from(state.skills_dir), skills_root);
@@ -519,11 +538,11 @@ mod tests {
         assert!(result.success);
         assert!(skills_root.exists());
         assert_eq!(result.skills.len(), 1);
-        assert_eq!(result.skills[0].name, "myskills-command");
+        assert_eq!(result.skills[0].name, "myskills-router");
     }
 
     #[test]
-    fn onboarding_set_skills_dir_seeds_myskills_command_skill() {
+    fn onboarding_set_skills_dir_seeds_myskills_router_skill() {
         let _guard = lock_env();
         let home = temp_home();
         let skills_root = home.join("empty-skills-root");
@@ -534,11 +553,11 @@ mod tests {
                 .expect("set skills dir");
         assert!(result.success);
 
-        let skill_file = skills_root.join("myskills-command").join("SKILL.md");
-        assert!(skill_file.exists(), "myskills-command skill should be generated");
+        let skill_file = skills_root.join("myskills-router").join("SKILL.md");
+        assert!(skill_file.exists(), "myskills-router skill should be generated");
 
         let raw = fs::read_to_string(&skill_file).expect("read generated skill");
-        assert!(raw.contains("name: myskills-command"));
+        assert!(raw.contains("name: myskills-router"));
     }
 
     #[test]
@@ -546,14 +565,14 @@ mod tests {
         let _guard = lock_env();
         let home = temp_home();
         let skills_root = home.join("existing-skills-root");
-        let builtin_skill_file = skills_root.join("myskills-command").join("SKILL.md");
+        let builtin_skill_file = skills_root.join("myskills-router").join("SKILL.md");
         fs::create_dir_all(
             builtin_skill_file
                 .parent()
-                .expect("myskills-command parent directory"),
+                .expect("myskills-router parent directory"),
         )
         .expect("create builtin skill directory");
-        fs::write(&builtin_skill_file, "---\nname: myskills-command\n---\n# old\n")
+        fs::write(&builtin_skill_file, "---\nname: myskills-router\n---\n# old\n")
             .expect("write outdated builtin skill");
 
         let result =
@@ -562,7 +581,42 @@ mod tests {
         assert!(result.success);
 
         let raw = fs::read_to_string(&builtin_skill_file).expect("read refreshed skill");
-        assert_eq!(raw, MYSKILLS_COMMAND_SKILL_MD);
+        assert_eq!(raw, MYSKILLS_ROUTER_SKILL_MD);
+    }
+
+    #[test]
+    fn onboarding_set_skills_dir_migrates_legacy_myskills_command_to_router() {
+        let _guard = lock_env();
+        let home = temp_home();
+        let skills_root = home.join("legacy-name-skills-root");
+        let legacy_skill_file = skills_root.join("myskills-command").join("SKILL.md");
+        fs::create_dir_all(
+            legacy_skill_file
+                .parent()
+                .expect("legacy skill parent directory"),
+        )
+        .expect("create legacy skill directory");
+        fs::write(&legacy_skill_file, "---\nname: myskills-command\n---\n# legacy\n")
+            .expect("write legacy skill");
+
+        let result =
+            onboarding_set_skills_dir_with_home(&home, &skills_root.to_string_lossy(), false)
+                .expect("set skills dir");
+        assert!(result.success);
+        assert!(!skills_root.join("myskills-command").exists());
+        assert!(result
+            .skills
+            .iter()
+            .any(|skill| skill.name == "myskills-router"));
+        assert!(!result
+            .skills
+            .iter()
+            .any(|skill| skill.name == "myskills-command"));
+
+        let router_skill_file = skills_root.join("myskills-router").join("SKILL.md");
+        assert!(router_skill_file.exists(), "router skill should exist after migration");
+        let raw = fs::read_to_string(&router_skill_file).expect("read migrated router skill");
+        assert_eq!(raw, MYSKILLS_ROUTER_SKILL_MD);
     }
 
     #[test]
@@ -591,10 +645,10 @@ mod tests {
 
         apply_bootstrap_env().expect("bootstrap env");
 
-        let skill_file = skills_root.join("myskills-command").join("SKILL.md");
+        let skill_file = skills_root.join("myskills-router").join("SKILL.md");
         assert!(
             skill_file.exists(),
-            "bootstrap should seed myskills-command for existing config"
+            "bootstrap should seed myskills-router for existing config"
         );
         assert_eq!(
             std::env::var("MYSKILLS_ROOT_DIR").expect("MYSKILLS_ROOT_DIR should be set"),
@@ -704,3 +758,4 @@ mod tests {
     }
 
 }
+

@@ -1,9 +1,9 @@
----
-name: myskills-command
+﻿---
+name: myskills-router
 description: Use when starting any conversation to enforce skill routing. Require invoking applicable skills before ANY response, clarifying question, tool call, or file operation; trigger by default when uncertain or when users explicitly name skills.
 ---
 
-# MySkills Command
+# MySkills Router
 
 Treat this as a rigid, always-first process skill.
 
@@ -37,9 +37,9 @@ Create an auditable decision record.
 ## Decision Workflow
 
 ```dot
-digraph myskills_command {
-  "New turn" -> "Run myskills-command first";
-  "Run myskills-command first" -> "List candidate skills from metadata";
+digraph myskills_router {
+  "New turn" -> "Run myskills-router first";
+  "Run myskills-router first" -> "List candidate skills from metadata";
   "List candidate skills" -> "Any skill plausible?";
   "Any skill plausible?" -> "Invoke Skill tool for selected skills" [label="yes"];
   "Any skill plausible?" -> "Record none-applicable decision" [label="no"];
@@ -133,3 +133,4 @@ This skill has completed only when:
 1. Selection is recorded.
 2. Required downstream skills are invoked in order.
 3. Only then may task execution continue.
+

@@ -97,8 +97,6 @@ Skillar 的产品设计遵循三条原则：
 ### 1) 直接下载（推荐）
 
 - GitHub Releases: `https://github.com/KeithChen51/MySkills-Manager/releases/latest`
-- 公司 Gitee 仓库（仅内网，不在此流程中访问）: `https://devops.byd.com/QCSHFW/lin.zixuan/skillar.git`
-- 公司上传物料本地目录: `C:\Own Docm\Coding\My-Skills\gitee-ver`
 - 主要面向 Windows，下载后可直接使用 `Skillar.exe`（以发布页实际文件名为准）。
 
 ### 2) 从源码运行（开发/试用）
@@ -154,7 +152,7 @@ npm run dev
 npm run build:desktop
 ```
 
-Windows 发布打包（生成 `release/Skillar.exe` 并准备 `C:\Own Docm\Coding\My-Skills\gitee-ver` 物料）：
+Windows 发布打包（生成 `release/Skillar.exe` 并准备发布物料）：
 
 ```bash
 npm run build:desktop:windows
@@ -226,7 +224,7 @@ myskills-manager/
 
 - 桌面构建产物位于 `src-tauri/target/release/bundle/`。
 - Windows 分发可执行文件默认为 `release/Skillar.exe`。
-- 若使用 `pack:gitee`，会在工作区 `C:\Own Docm\Coding\My-Skills\gitee-ver` 输出 exe 与源码压缩包。
+- 若使用 `pack:gitee`，会输出 exe 与源码压缩包。
 
 ---
 
